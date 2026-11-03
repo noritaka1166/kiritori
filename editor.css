@@ -1,0 +1,54 @@
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #202124; background: #f5f7fa; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input { font: inherit; }
+button { border: 1px solid #ccd3dd; border-radius: 8px; padding: 8px 12px; background: #fff; color: #263343; cursor: pointer; }
+button:hover { background: #edf3ff; }
+button:disabled { cursor: not-allowed; opacity: .48; }
+button:focus-visible, input:focus-visible { outline: 3px solid #9bbfff; outline-offset: 2px; }
+.header { min-height: 64px; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #fff; border-bottom: 1px solid #dfe4eb; }
+.header strong { font-size: 19px; color: #174ea6; }
+.header span { margin-left: 14px; color: #596579; font-size: 14px; }
+.actions { display: flex; gap: 8px; }
+.primary { background: #1a73e8; border-color: #1a73e8; color: white; font-weight: 650; }
+.primary:hover { background: #1765cc; }
+main { max-width: 1280px; margin: auto; padding: 18px 24px 32px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border: 1px solid #dfe4eb; border-radius: 12px; background: #fff; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.tools button[aria-pressed="true"] { color: #174ea6; border-color: #1a73e8; background: #e8f0fe; font-weight: 650; }
+.toolbar label { display: inline-flex; align-items: center; gap: 5px; color: #536071; font-size: 13px; }
+.toolbar input { height: 34px; border: 1px solid #ccd3dd; border-radius: 6px; padding: 4px 6px; }
+.palette { margin-top: 8px; padding: 10px 12px; border: 1px solid #dfe4eb; border-radius: 10px; background: #fff; }
+.palette-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.palette-row + .palette-row { margin-top: 8px; }
+.palette strong, .custom-picker { color: #536071; font-size: 13px; }
+.custom-picker { display: inline-flex; align-items: center; gap: 5px; }
+.swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.swatch { width: 26px; height: 26px; min-width: 26px; padding: 0; border: 1px solid #8794a5; border-radius: 50%; background: var(--swatch); }
+.swatch:hover { background: var(--swatch); filter: brightness(.92); }
+.swatch[aria-pressed="true"] { outline: 2px solid #1a73e8; outline-offset: 2px; }
+.saved-swatch { display: inline-flex; align-items: center; gap: 2px; }
+.remove-color { width: 19px; height: 23px; padding: 0; border: 0; background: transparent; color: #596579; font-size: 17px; line-height: 1; }
+.palette #save-color { padding: 5px 9px; font-size: 12px; }
+.palette-status { margin: 4px 0 0; color: #536071; font-size: 12px; }
+.palette-status:empty { display: none; }
+#color { width: 40px; height: 32px; padding: 2px; border: 1px solid #ccd3dd; border-radius: 6px; background: #fff; }
+#size { width: 65px; }
+#inline-text { position: absolute; z-index: 2; box-sizing: border-box; min-width: 24px; height: auto; margin: 0; padding: 0 1px; border: 0; border-bottom: 1px solid #1a73e8; border-radius: 0; outline: none; appearance: none; background: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.25; transform-origin: top left; caret-color: #1a73e8; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; }
+#inline-text:focus-visible { outline: none; }
+.object-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; padding: 10px 12px; border: 1px solid #b8cff5; border-radius: 10px; background: #f1f6ff; }
+.object-controls strong { color: #174ea6; font-size: 13px; }
+.object-controls label { display: inline-flex; align-items: center; gap: 5px; color: #536071; font-size: 13px; }
+.object-controls input { width: 80px; height: 34px; border: 1px solid #ccd3dd; border-radius: 6px; padding: 4px 6px; }
+.object-controls .object-text input { width: 210px; }
+.hint, .privacy-note { color: #536071; font-size: 13px; line-height: 1.5; }
+.workspace { min-height: 180px; overflow: auto; padding: 20px; border: 1px solid #dfe4eb; border-radius: 12px; background: #e8ebf0; }
+.canvas-wrap { position: relative; max-width: 100%; margin: 0 auto; line-height: 0; }
+canvas { display: block; width: 100%; height: auto; background: white; box-shadow: 0 2px 12px #23334a26; cursor: crosshair; touch-action: none; }
+svg { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+#text-resize-handle, #text-rotate-handle { pointer-events: all; touch-action: none; }
+#text-resize-handle { cursor: nwse-resize; }
+#text-rotate-handle { cursor: grab; }
+#text-rotate-handle:active { cursor: grabbing; }
+[hidden] { display: none !important; }
+@media (max-width: 650px) { .header { padding: 12px; } main { padding: 12px; } .header span { display: block; margin: 2px 0 0; } .workspace { padding: 8px; } }

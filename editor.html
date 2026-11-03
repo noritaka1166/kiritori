@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KiriTori - プレビューと編集</title>
+    <link rel="stylesheet" href="editor.css">
+  </head>
+  <body>
+    <header class="header">
+      <div><strong>KiriTori</strong><span>プレビューと編集</span></div>
+      <div class="actions">
+        <button id="cancel" type="button" class="secondary">キャンセル</button>
+        <button id="export" type="button" class="primary" disabled>出力</button>
+      </div>
+    </header>
+    <main>
+      <section class="toolbar" aria-label="編集ツール">
+        <div class="tools" role="group" aria-label="ツール">
+          <button type="button" data-tool="select" aria-pressed="false">選択・調整</button>
+          <button type="button" data-tool="crop" aria-pressed="true">切り抜き</button>
+          <button type="button" data-tool="arrow" aria-pressed="false">矢印</button>
+          <button type="button" data-tool="rect" aria-pressed="false">四角</button>
+          <button type="button" data-tool="ellipse" aria-pressed="false">丸</button>
+          <button type="button" data-tool="line" aria-pressed="false">直線</button>
+          <button type="button" data-tool="text" aria-pressed="false">文字</button>
+          <button type="button" data-tool="mosaic" aria-pressed="false">ぼかし</button>
+          <button type="button" data-tool="redact" aria-pressed="false">塗りつぶし</button>
+          <button type="button" data-tool="marker" aria-pressed="false">マーカー</button>
+        </div>
+        <label>大きさ <input id="size" type="number" min="12" max="160" value="36"></label>
+        <button id="undo" type="button" disabled>元に戻す</button>
+        <button id="redo" type="button" disabled>やり直す</button>
+        <button id="reset" type="button" disabled>最初に戻す</button>
+      </section>
+      <section class="palette" aria-label="色の設定">
+        <div class="palette-row">
+          <strong>基本色</strong>
+          <div id="preset-colors" class="swatches" role="group" aria-label="基本色"></div>
+          <label class="custom-picker">カラーパレット <input id="color" type="color" value="#e53935" aria-label="カラーパレット"></label>
+          <button id="save-color" type="button" disabled>現在の色を登録</button>
+        </div>
+        <div id="saved-colors-row" class="palette-row" hidden>
+          <strong>登録した色</strong>
+          <div id="saved-colors" class="swatches" role="group" aria-label="登録した色"></div>
+        </div>
+        <p id="palette-status" class="palette-status" role="status" aria-live="polite"></p>
+      </section>
+      <section id="object-controls" class="object-controls" aria-label="選択した要素の調整" hidden>
+        <strong id="object-label">選択中</strong>
+        <label>大きさ <input id="object-size" type="number" min="12" max="500" step="1"></label>
+        <label id="object-angle-label">向き（度） <input id="object-angle" type="number" min="-360" max="360" step="1"></label>
+        <label id="object-length-label">長さ <input id="object-length" type="number" min="4" max="100000" step="1"></label>
+        <label id="object-text-label" class="object-text">文字 <input id="object-text" type="text" maxlength="200"></label>
+        <button id="object-deselect" type="button">選択解除</button>
+        <button id="object-delete" type="button">選択した要素を削除</button>
+      </section>
+      <p id="hint" class="hint" role="status" aria-live="polite">画像を読み込んでいます…</p>
+      <div id="workspace" class="workspace">
+        <div id="canvas-wrap" class="canvas-wrap">
+          <canvas id="canvas" aria-label="撮影画像のプレビュー"></canvas>
+          <input id="inline-text" type="text" maxlength="200" aria-label="画像に入れる文字" autocomplete="off" hidden>
+          <svg id="overlay" aria-hidden="true" preserveAspectRatio="none">
+            <defs><marker id="arrow-head" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="strokeWidth"><path id="arrow-head-path" d="M0,0 L9,4.5 L0,9 Z"/></marker></defs>
+            <rect id="selection" fill="rgba(26,115,232,.15)" stroke="#1a73e8" stroke-width="3" stroke-dasharray="10 7" visibility="hidden"/>
+            <ellipse id="ellipse-preview" fill="none" stroke="#1a73e8" stroke-width="3" stroke-dasharray="10 7" visibility="hidden"/>
+            <line id="arrow-preview" stroke="#e53935" stroke-width="6" marker-end="url(#arrow-head)" visibility="hidden"/>
+            <g id="object-selection" visibility="hidden">
+              <line id="object-line" stroke="#1a73e8" stroke-width="3" stroke-dasharray="8 5" />
+              <circle id="object-start" fill="#fff" stroke="#1a73e8" stroke-width="3" />
+              <circle id="object-end" fill="#fff" stroke="#1a73e8" stroke-width="3" />
+              <rect id="object-box" fill="none" stroke="#1a73e8" stroke-width="3" stroke-dasharray="8 5" />
+              <line id="text-rotate-line" stroke="#1a73e8" stroke-width="2" visibility="hidden" />
+              <circle id="text-resize-handle" fill="#fff" stroke="#1a73e8" stroke-width="3" visibility="hidden" />
+              <circle id="text-rotate-handle" fill="#1a73e8" stroke="#fff" stroke-width="3" visibility="hidden" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <p class="privacy-note">塗りつぶしは不透明です。マーカーは半透明で内容が見えます。隠したい部分が覆われているか、出力前に確認してください。</p>
+      <a id="fallback" hidden download="KiriTori.png">編集画像をPNGで保存</a>
+    </main>
+    <script src="i18n.js"></script>
+    <script src="editor.js"></script>
+  </body>
+</html>

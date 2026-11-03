@@ -1,0 +1,692 @@
+{
+  "m_0104628a4f37ac21": {
+    "message": "Page content never leaves your device."
+  },
+  "m_09c7d3d7b1cdfa06": {
+    "message": "Capture failure history"
+  },
+  "m_75fa8b8f05fb9f50": {
+    "message": "Up to 10 recent failures are stored on this device."
+  },
+  "m_5be3c4a1fb534ae6": {
+    "message": "Clear history"
+  },
+  "m_6950f4b0e93a2ce7": {
+    "message": "Preparing capture…"
+  },
+  "m_5adc23993ae9dbd1": {
+    "message": "Show editor"
+  },
+  "m_6b03b5e2d7eada72": {
+    "message": "Cancel capture"
+  },
+  "m_d82e8a3ebd40b4fb": {
+    "message": "Capture will stop when the current operation finishes."
+  },
+  "m_c532f2f917328674": {
+    "message": "Capture area"
+  },
+  "m_a1b5be7d66841085": {
+    "message": "Visible area"
+  },
+  "m_70cd0d14af22ee48": {
+    "message": "Selected area"
+  },
+  "m_cb883e1f26657b05": {
+    "message": "Full page (scrolling)"
+  },
+  "m_e479a36643a4d10a": {
+    "message": "Format"
+  },
+  "m_de91373aaaac3eaa": {
+    "message": "Destination"
+  },
+  "m_74a140953d6eb7a8": {
+    "message": "Save to file"
+  },
+  "m_5e9b7fbfee63e12e": {
+    "message": "Copy to clipboard"
+  },
+  "m_e061298d7052de5a": {
+    "message": "Save and copy"
+  },
+  "m_8941e5af9471349f": {
+    "message": "Filename"
+  },
+  "m_3457897de29f6131": {
+    "message": "Page title_Date and time"
+  },
+  "m_23d7cc60376b78d1": {
+    "message": "Date and time_Site_Page title"
+  },
+  "m_08c0279b7786dce9": {
+    "message": "Site_Date and time_Page title"
+  },
+  "m_2f81feb6ca7880c0": {
+    "message": "The date uses local time; the site name is its domain."
+  },
+  "m_6f956e1d46388302": {
+    "message": "Split long pages"
+  },
+  "m_3f0a8e2a18d3020f": {
+    "message": "Split full-page output by screen height"
+  },
+  "m_376d700ce978c6d1": {
+    "message": "PNG and JPEG use numbered images; PDF uses multiple pages. Copy uses the whole image."
+  },
+  "m_6f6ac8b640c46385": {
+    "message": "Not applied to Markdown or copy-only output."
+  },
+  "m_17f4ef2fe14b7cc5": {
+    "message": "Capture options"
+  },
+  "m_b2da43be9b6d2a41": {
+    "message": "Preview and edit before output"
+  },
+  "m_7a43684525c72510": {
+    "message": "Crop or add arrows, text, and blur."
+  },
+  "m_a1c14b33160e28d0": {
+    "message": "Ad settings"
+  },
+  "m_50ccf44f60eb5778": {
+    "message": "Hide ads during capture"
+  },
+  "m_794952953788174a": {
+    "message": "Off by default. Ad-like elements are hidden only during capture and restored afterward."
+  },
+  "m_4c4c740a23a0817b": {
+    "message": "Manually hidden elements"
+  },
+  "m_52f14ba15a823a91": {
+    "message": "Choose elements to hide before capture"
+  },
+  "m_5c89d1e255f42e1d": {
+    "message": "Click unwanted page elements to select them."
+  },
+  "m_02a02727b2a04c00": {
+    "message": "Save folder"
+  },
+  "m_22eceaba39c56e28": {
+    "message": "Folder inside Downloads"
+  },
+  "m_bb15fc973a9b1cb2": {
+    "message": "Capture and output"
+  },
+  "m_54243278e4efd49e": {
+    "message": "Choose a format and capture area."
+  },
+  "m_8435605fe1706a26": {
+    "message": "Images are copied as PNG. PDF cannot be copied."
+  },
+  "m_8bc884abd794ff04": {
+    "message": "You can also use the KiriTori context menu or keyboard shortcut."
+  },
+  "m_9c02fdab805164cd": {
+    "message": "KiriTori - Preview and edit"
+  },
+  "m_5f287ebce07c0eab": {
+    "message": "Preview and edit"
+  },
+  "m_bca84ea5c65fee0e": {
+    "message": "Cancel"
+  },
+  "m_d38a2a54cf74a633": {
+    "message": "Output"
+  },
+  "m_359d0f364ad58853": {
+    "message": "Editing tools"
+  },
+  "m_76389aaa773041a5": {
+    "message": "Tools"
+  },
+  "m_73557fb569c969e1": {
+    "message": "Select and adjust"
+  },
+  "m_631432f8ff93d8aa": {
+    "message": "Crop"
+  },
+  "m_b7bacd1a85a3edf4": {
+    "message": "Arrow"
+  },
+  "m_14b69bd6eeb0839b": {
+    "message": "Text"
+  },
+  "m_38c49ef25f553d28": {
+    "message": "Blur"
+  },
+  "m_2b3611f71ddd36fd": {
+    "message": "Color"
+  },
+  "m_c05f6b95b8cfa90b": {
+    "message": "Size"
+  },
+  "m_dc65bd3603e8227e": {
+    "message": "Undo"
+  },
+  "m_bec289b8145f18e1": {
+    "message": "Reset"
+  },
+  "m_5896bca7f7ada107": {
+    "message": "Adjust selected element"
+  },
+  "m_9968877d4460da3d": {
+    "message": "Selected"
+  },
+  "m_e206b1090aa99ca1": {
+    "message": "Angle (degrees)"
+  },
+  "m_c4cd195750768e95": {
+    "message": "Length"
+  },
+  "m_3f5c403e6f527a3e": {
+    "message": "Deselect"
+  },
+  "m_8a194ab4eb9972d3": {
+    "message": "Delete selected element"
+  },
+  "m_2fa6f04aa03a29a3": {
+    "message": "Loading image…"
+  },
+  "m_fe56d8b19c7e05fd": {
+    "message": "Capture preview"
+  },
+  "m_2146b9abbd1f4e0e": {
+    "message": "Text to add to image"
+  },
+  "m_ae63b42647387527": {
+    "message": "Blur is applied as pixelation. Zoom in before output to verify that sensitive text is unreadable."
+  },
+  "m_e15318e2941c05b7": {
+    "message": "Save edited image as PNG"
+  },
+  "m_ea2f6de95ac93372": {
+    "message": "Could not load history."
+  },
+  "m_871b421206fd6606": {
+    "message": "Selected area"
+  },
+  "m_7318df2ce29e1807": {
+    "message": "Full page"
+  },
+  "m_9e305eab23ddf8d3": {
+    "message": "Preparing"
+  },
+  "m_5e739b91b72dffe7": {
+    "message": "Selecting elements"
+  },
+  "m_f4dc04f22506af67": {
+    "message": "Capturing"
+  },
+  "m_586ac4a77ac8fa5f": {
+    "message": "Processing image"
+  },
+  "m_106e95ca839e1ede": {
+    "message": "Editing"
+  },
+  "m_9bdeaffa2792784a": {
+    "message": "Outputting"
+  },
+  "m_cc47fbd863afb5a0": {
+    "message": "Unknown time"
+  },
+  "m_711a4114ca64dbc1": {
+    "message": "Capture failed."
+  },
+  "m_8f095b90c404abc9": {
+    "message": "Please try capturing again."
+  },
+  "m_bcd70af59a0c1ef8": {
+    "message": "Could not load failure history. Reload the extension."
+  },
+  "m_07cb578ec1d179e0": {
+    "message": "Could not clear failure history."
+  },
+  "m_0047b337b78fe66b": {
+    "message": "Cancelling capture…"
+  },
+  "m_a4aaa7006115d7c7": {
+    "message": "Select elements to hide on the page, then choose Done."
+  },
+  "m_a5ced2ad4711d25a": {
+    "message": "Review and edit the image in the preview."
+  },
+  "m_d388de426f744f05": {
+    "message": "Outputting captured image…"
+  },
+  "m_07b7b827a37793dc": {
+    "message": "Cancelling…"
+  },
+  "m_116e8cf205b439c6": {
+    "message": "Could not retrieve capture status. Reload the extension."
+  },
+  "m_89bb8d5e6db078d5": {
+    "message": "Could not open the editor."
+  },
+  "m_c9d9154e512acf12": {
+    "message": "Could not cancel."
+  },
+  "m_f9cb3e8c99d03d03": {
+    "message": "Could not load settings. Reload the extension."
+  },
+  "m_4511562e98fe5427": {
+    "message": "Capturing the page while scrolling…"
+  },
+  "m_c53d4041c193b667": {
+    "message": "Capturing…"
+  },
+  "m_76b86b82c3e10836": {
+    "message": "Capture cancelled."
+  },
+  "m_7155315d1befa2be": {
+    "message": "Capture failed."
+  },
+  "m_60d9e75a4681fbdf": {
+    "message": "Select text and drag the white handle to resize or the blue handle to rotate. Click text to edit it."
+  },
+  "m_1d6c122b39c349b1": {
+    "message": "Drag over the area to keep."
+  },
+  "m_38d73240a006aa10": {
+    "message": "Drag from the start to the end of the arrow."
+  },
+  "m_e39501595ed74dba": {
+    "message": "Click where you want text and type. Press Enter to confirm."
+  },
+  "m_a8833af36f180173": {
+    "message": "Drag over the area to blur."
+  },
+  "m_3b89b8a32e123248": {
+    "message": "Type on the image. Press Enter or click elsewhere to confirm."
+  },
+  "m_4db39677dfb51afb": {
+    "message": "Adjust arrow"
+  },
+  "m_3157f885f8a9f08a": {
+    "message": "Adjust text"
+  },
+  "m_aaa7d2e62d980e55": {
+    "message": "Outputting edited image…"
+  },
+  "m_e0ffde9d030aca62": {
+    "message": "Could not create image."
+  },
+  "m_1668fd844e619166": {
+    "message": "Could not output image."
+  },
+  "m_0bf2fdcf19425b8c": {
+    "message": "Cancelling…"
+  },
+  "m_659a0a8016fc1687": {
+    "message": "Output complete."
+  },
+  "m_c6326ce53cb25d34": {
+    "message": "Capture ended."
+  },
+  "m_f6c244f98893cd95": {
+    "message": "Close"
+  },
+  "m_f87a3c080baf0004": {
+    "message": "The image to edit could not be found."
+  },
+  "m_18c8dbee66c9ae91": {
+    "message": "The editor disconnected. You can save the edited image as PNG."
+  },
+  "m_632a03c6b6bbbd0a": {
+    "message": "Could not load image."
+  },
+  "m_a3030bf8f16dc63c": {
+    "message": "Save"
+  },
+  "m_70f7ae4afacd9b24": {
+    "message": "Copy"
+  },
+  "m_3c89298796c44465": {
+    "message": "Capture visible area"
+  },
+  "m_9db257fde45cc99f": {
+    "message": "Capture selected area"
+  },
+  "m_a1f0d27f3db46cdf": {
+    "message": "Capture full page"
+  },
+  "m_10a988bb18f5aece": {
+    "message": "Cancelling capture"
+  },
+  "m_81c6d09aa47c0d59": {
+    "message": "Selecting elements to hide"
+  },
+  "m_55092f3643c199c6": {
+    "message": "Editing preview"
+  },
+  "m_f24d9c615cf2922a": {
+    "message": "Combining images"
+  },
+  "m_1d56f1b80841f4d7": {
+    "message": "Outputting image"
+  },
+  "m_ec8a2c54ac8a4baa": {
+    "message": "Preparing capture"
+  },
+  "m_9cbda84b91daaf37": {
+    "message": "Select elements to hide"
+  },
+  "m_83ed4b866ca18b09": {
+    "message": "Click to hide · ↑ selects parent"
+  },
+  "m_bf910bac17d068ae": {
+    "message": "Undo last"
+  },
+  "m_d4a064e04c792844": {
+    "message": "Done"
+  },
+  "m_d72166e6020e6c99": {
+    "message": "Drag to select an area · Esc to cancel"
+  },
+  "m_ff32bf9bfb14b368": {
+    "message": "Cannot capture this page. Try a regular web page."
+  },
+  "m_28c15049843ccaed": {
+    "message": "The page or image is too large."
+  },
+  "m_0c49d17c6482b9f5": {
+    "message": "Capture visible or selected areas separately. Full-page capture supports up to 80 screens and 80 million pixels."
+  },
+  "m_c68bc93e502ff279": {
+    "message": "The tab changed during capture."
+  },
+  "m_e6c0b6b2f60cebd7": {
+    "message": "Keep the capture tab active and try again."
+  },
+  "m_e8a222dcc6ed9c53": {
+    "message": "Another capture is in progress."
+  },
+  "m_c6da3ed304f83cf2": {
+    "message": "Finish or cancel the active capture, then try again."
+  },
+  "m_f45a75b237ff02d3": {
+    "message": "Could not scroll the page."
+  },
+  "m_4c49179b9bbfbaef": {
+    "message": "Capture the visible or selected area instead."
+  },
+  "m_8cce3a0b92e2e556": {
+    "message": "This page cannot be accessed."
+  },
+  "m_658c2edb7ebfc2b6": {
+    "message": "Try a web page outside Chrome internal pages and the Chrome Web Store."
+  },
+  "m_0bd927aee1bbdd62": {
+    "message": "The tab to capture could not be found."
+  },
+  "m_b2959c13cfeabb17": {
+    "message": "Reopen the page and try again."
+  },
+  "m_1fb7c62d8dc87ce7": {
+    "message": "Could not copy to the clipboard."
+  },
+  "m_030ddff12d5b0214": {
+    "message": "Choose “Save to file” as the destination and try again."
+  },
+  "m_6c19ae771dfae4b9": {
+    "message": "Image output failed."
+  },
+  "m_f38f34b4a50bcdd7": {
+    "message": "Check Chrome download settings and the destination, then try again. A copy or some files may already have been output."
+  },
+  "m_a10686c46bc1c19f": {
+    "message": "Reload the page and try again. If it continues, capture the visible area."
+  },
+  "m_f856c2d870844250": {
+    "message": "Could not load failure history."
+  },
+  "m_38ef0b8bdf56f2f5": {
+    "message": "There is no capture to cancel."
+  },
+  "m_6e1885468ad4a62d": {
+    "message": "Editor not found."
+  },
+  "m_8a2516916a8c6136": {
+    "message": "Could not receive the edited image."
+  },
+  "m_e124da5439314096": {
+    "message": "Please select a capture area again."
+  },
+  "m_705c4f3e17637307": {
+    "message": "Please select an output format again."
+  },
+  "m_1030062d58a8d789": {
+    "message": "Please select a destination again."
+  },
+  "m_9bfeaadf752805e6": {
+    "message": "PDF can only be saved to a file."
+  },
+  "m_fc40e16ec140bfe7": {
+    "message": "The Chrome tab to capture could not be found."
+  },
+  "m_892aed8206df1e1c": {
+    "message": "Could not scroll vertically. Capture the visible or selected area instead."
+  },
+  "m_c90fc17953a6744c": {
+    "message": "Could not update the scroll position. Capture the visible or selected area instead."
+  },
+  "m_ee3752703a806f69": {
+    "message": "The page is too long to capture at once (maximum 80 screens)."
+  },
+  "m_48ffe16c51cd85fd": {
+    "message": "Area selection cancelled."
+  },
+  "m_63440ebe20de1578": {
+    "message": "Could not receive the edited image."
+  },
+  "m_5e9557cfd235249e": {
+    "message": "Image processing failed."
+  },
+  "m_0049240cf3e85a4c": {
+    "message": "Capture stopped because the tab changed."
+  },
+  "m_9e8321ef4c12620d": {
+    "message": "Another capture is in progress. Wait for it to finish or cancel it."
+  },
+  "m_e664daf3c88d6d9a": {
+    "message": "There is no image to preview."
+  },
+  "m_a2ba10fbc3ff4c37": {
+    "message": "There is no image to edit."
+  },
+  "m_8f993cdc34fa1712": {
+    "message": "Could not read the edited image."
+  },
+  "m_9177aeb2b7d024aa": {
+    "message": "The edited image is too large."
+  },
+  "m_0f3a23a9cd0e1f3b": {
+    "message": "Could not create the edited image."
+  },
+  "m_49e1c770095cf955": {
+    "message": "Image processing is not ready."
+  },
+  "m_c6be26702f02987b": {
+    "message": "Could not create the image processing canvas."
+  },
+  "m_31492637cdacedb9": {
+    "message": "The page image is too large. Capture the visible or selected area."
+  },
+  "m_6e8fc02dc99f1f76": {
+    "message": "Could not expand the image processing canvas."
+  },
+  "m_b76384902956a9ce": {
+    "message": "There is no captured image."
+  },
+  "m_1091998e93b73920": {
+    "message": "Could not create split images."
+  },
+  "m_25bff5692c440f9c": {
+    "message": "Screenshot"
+  },
+  "m_31e0024dc123236b": {
+    "message": "Captured at"
+  },
+  "m_4906b127a405c6ba": {
+    "message": "This format cannot be copied to the clipboard."
+  },
+  "m_a4a0388f9d48d13c": {
+    "message": "Could not create the image file."
+  },
+  "m_5305a11ac22fdd82": {
+    "message": "Could not read the image."
+  },
+  "m_c55fae03f5be7c12": {
+    "message": "Image processing and optional clipboard writing"
+  },
+  "m_9cd713021a60161a": {
+    "message": "Save the visible area, a selection, or a full scrolling page locally."
+  },
+  "m_71bced0d6a9190ef": {
+    "message": "Capture using the current settings"
+  },
+  "m_19e108e9e9030758": {
+    "message": "Screen $1"
+  },
+  "m_c636078123823beb": {
+    "message": "Capturing screen $1…"
+  },
+  "m_a2b1d6be12493a76": {
+    "message": "Captured $1 screens; combining images…"
+  },
+  "m_047a1ad16defd583": {
+    "message": "Capturing screen $1"
+  },
+  "m_6be9b08f91c3a261": {
+    "message": "Selected: $1"
+  },
+  "m_2b09db8ba96e98e3": {
+    "message": "Saved $1 file(s) under Downloads"
+  },
+  "m_d4f905cf578f8c9b": {
+    "message": "Copied to clipboard"
+  },
+  "m_973179f5431a7901": {
+    "message": "KiriTori: Capture cancelled"
+  },
+  "m_244b85c01afa273c": {
+    "message": "Open the extension icon for details."
+  },
+  "m_960aea99a4009c37": {
+    "message": "Markdown (MD)"
+  },
+  "m_8e823863ccb42c9b": {
+    "message": "Color settings"
+  },
+  "m_9e22edfe3136c619": {
+    "message": "Basic colors"
+  },
+  "m_d1316484ee2f7cfd": {
+    "message": "Color picker"
+  },
+  "m_606b49e269d9b399": {
+    "message": "Save current color"
+  },
+  "m_c6e8e814e0b6d2ee": {
+    "message": "Saved colors"
+  },
+  "m_3af136601a23257b": {
+    "message": "Select color: $1"
+  },
+  "m_3139b71df6802730": {
+    "message": "Remove saved color $1"
+  },
+  "m_100751e3ef59ed19": {
+    "message": "This color is already saved."
+  },
+  "m_cf4358962508947e": {
+    "message": "You can save up to 12 colors."
+  },
+  "m_f5db0407bc9d11df": {
+    "message": "Color saved."
+  },
+  "m_e595ad7de70c0da4": {
+    "message": "Saved color removed."
+  },
+  "m_97b8b8a2a9de6b6f": {
+    "message": "Could not load saved colors."
+  },
+  "m_de36a0c5f1febe85": {
+    "message": "Could not save colors."
+  },
+  "m_d6765296ee89e6a0": {
+    "message": "Red"
+  },
+  "m_0349fe3db634e0ab": {
+    "message": "Orange"
+  },
+  "m_d451c07d739b3306": {
+    "message": "Yellow"
+  },
+  "m_005c047dbb3dccba": {
+    "message": "Green"
+  },
+  "m_68fd7ad3b00f50fc": {
+    "message": "Cyan"
+  },
+  "m_dc06463a46eb5685": {
+    "message": "Blue"
+  },
+  "m_3d0158cb7cfdd906": {
+    "message": "Purple"
+  },
+  "m_680105f7f1c8587d": {
+    "message": "Black"
+  },
+  "m_3366645622a78090": {
+    "message": "White"
+  },
+  "m_5186b18afc149196": {
+    "message": "Fill"
+  },
+  "m_d5f208dc7b13ce02": {
+    "message": "Marker"
+  },
+  "m_cfdd56cfdcffe082": {
+    "message": "Drag over the area to hide. It will be filled with an opaque color."
+  },
+  "m_715e43a83fe33f1f": {
+    "message": "Drag over the area to highlight with a translucent color."
+  },
+  "m_39326a70455f45a7": {
+    "message": "Fill is opaque. Marker is translucent and content remains visible. Before output, check that all sensitive areas are covered."
+  },
+  "m_bb9965eed1aa97ab": {
+    "message": "Redo"
+  },
+  "m_7088849041f8d77b": {
+    "message": "Rectangle"
+  },
+  "m_f1724fcf5adc7531": {
+    "message": "Ellipse"
+  },
+  "m_ddb69ad79e2dd9c7": {
+    "message": "Line"
+  },
+  "m_de10e0e165dcde17": {
+    "message": "Adjust line"
+  },
+  "m_180fdcccf3491a95": {
+    "message": "Adjust rectangle"
+  },
+  "m_9e0774f86a1f8ee7": {
+    "message": "Adjust ellipse"
+  },
+  "m_69aae9663ffda2aa": {
+    "message": "Drag from the start to the end of the line."
+  },
+  "m_17fc5220db1f5317": {
+    "message": "Drag to draw a rectangle."
+  },
+  "m_bd2990c71b6f5a2b": {
+    "message": "Drag to draw an ellipse."
+  },
+  "m_306d47982924f5a3": {
+    "message": "Select text or shapes to move and adjust them. Drag the white handle to resize, or the ends of a line to adjust it."
+  }
+}
