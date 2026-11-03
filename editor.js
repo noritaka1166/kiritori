@@ -24,6 +24,7 @@ const undoButton = document.querySelector("#undo");
 const redoButton = document.querySelector("#redo");
 const resetButton = document.querySelector("#reset");
 const exportButton = document.querySelector("#export");
+const retakeButton = document.querySelector("#retake");
 const cancelButton = document.querySelector("#cancel");
 const fallback = document.querySelector("#fallback");
 const objectControls = document.querySelector("#object-controls");
@@ -849,10 +850,34 @@ objectDelete.addEventListener("click", () => {
 
 function setEditingDisabled(disabled) {
   paletteDisabled = disabled;
-  for (const element of [...toolButtons, colorInput, sizeInput, mosaicBlockInput, inlineText, objectSize, objectAngle, objectLength, objectText, objectDeselect, objectDelete, undoButton, redoButton, resetButton, exportButton]) element.disabled = disabled;
+  for (const element of [...toolButtons, colorInput, sizeInput, mosaicBlockInput, inlineText, objectSize, objectAngle, objectLength, objectText, objectDeselect, objectDelete, undoButton, redoButton, resetButton, retakeButton, exportButton]) element.disabled = disabled;
+  if (!disabled && restoredDraftId) retakeButton.disabled = true;
   renderPalette();
   if (!disabled) updateButtons();
 }
+
+retakeButton.addEventListener("click", async () => {
+  if (submitted || terminal || restoredDraftId || !sourceImage) return;
+  if (inlineEdit) finishInlineText();
+  setEditingDisabled(true);
+  cancelButton.disabled = true;
+  hint.textContent = kiriT("撮り直しを準備しています…");
+  try {
+    await draftWrite.catch(() => undefined);
+    const response = await chrome.runtime.sendMessage({ type: "capture:editor:retake", jobId });
+    if (!response?.ok) throw new Error(response?.error || kiriT("撮り直しを開始できませんでした。"));
+    terminal = true;
+    try {
+      const tab = await chrome.tabs.getCurrent();
+      if (tab?.id) await chrome.tabs.remove(tab.id);
+      else window.close();
+    } catch (_) { window.close(); }
+  } catch (error) {
+    setEditingDisabled(false);
+    cancelButton.disabled = false;
+    hint.textContent = kiriT(error?.message || "撮り直しを開始できませんでした。");
+  }
+});
 
 exportButton.addEventListener("click", async () => {
   if (submitted || !sourceImage) return;
@@ -922,6 +947,7 @@ async function initialize() {
   if ((!jobId && !restoredDraftId) || !context) throw new Error(kiriT("編集する画像が見つかりません。"));
   try { draftDb = (await import("./draft-store.js")).draftStore; await draftDb.deleteExpired(); } catch (_) { draftStatus.textContent = kiriT("下書きを保存できませんでした。"); }
   if (restoredDraftId) {
+    retakeButton.title = kiriT("復元した下書きからは撮り直せません。元のページから撮影してください。");
     if (!draftDb) throw new Error(kiriT("下書きを読み込めませんでした。"));
     draftData = await draftDb.get(restoredDraftId);
     if (!draftData || draftData.expiresAt <= Date.now()) throw new Error(kiriT("下書きが見つからないか、保存期限が過ぎています。"));
@@ -980,6 +1006,7 @@ async function initialize() {
   render();
   exportButton.textContent = ({ save: kiriT("保存"), copy: kiriT("コピー"), both: kiriT("保存してコピー") })[response.destination] || kiriT("出力");
   exportButton.disabled = false;
+  retakeButton.disabled = false;
   selectTool("crop");
 }
 

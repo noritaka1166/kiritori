@@ -16,6 +16,8 @@ The popup provides local editor drafts. Choose no saving or retention for 1, 7, 
 
 The popup offers optional ad hiding, manual selection of elements to hide, and a preview editor. In the editor, choose **Text** and click the image to type. Use **Select and adjust** to move annotations; drag the white handle to resize text and the blue handle to rotate it. Confirm text with Enter before adjusting its handles. For pixelation, set the block size from 2 to 160 pixels before drawing; smaller values produce finer blocks. Pixelation may not fully conceal text, so review the result before sharing.
 
+In a fresh capture preview, **Retake** captures the original tab again with the same settings. Re-select any region or manually hidden elements. The original tab must still be on the same page. A saved editing draft is retained; retaking is unavailable from a restored draft.
+
 Choose a basic color or use the color picker for text and arrows. Save up to 12 custom colors locally for later use; remove a saved color with the adjacent × button. Select an existing annotation before choosing a color to change it.
 
 Use **Fill** and drag over an area to cover it with an opaque rectangle in the selected color. Use **Marker** to highlight with a translucent color; the content remains visible. Before sharing, check that every sensitive part is covered. Markdown also includes the page title and URL.

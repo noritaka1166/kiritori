@@ -54,6 +54,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(() => sendResponse({ ok: false, error: kiriT("編集画面を開けませんでした。") }));
     return true;
   }
+  if (message?.type === "capture:editor:retake") {
+    const job = activeCapture;
+    const valid = sender?.url?.startsWith(chrome.runtime.getURL("editor.html")) && sender.tab?.id === job?.editorTabId;
+    if (!valid || !job || job.id !== message.jobId || job.phase !== "editing" || job.editorCommitted || job.editorRetakePending) {
+      sendResponse({ ok: false, error: kiriT("撮り直しを開始できませんでした。") }); return false;
+    }
+    job.editorRetakePending = true;
+    (async () => {
+      let tab;
+      try { tab = await chrome.tabs.get(job.tabId); } catch (_) { throw new Error("撮影元のタブが見つかりません。"); }
+      if (!tab?.url || tab.url !== job.editorMeta?.url) throw new Error("撮影元のページが変更されています。元のページを開き直して撮影してください。");
+      if (activeCapture !== job || job.phase !== "editing" || job.cancelRequested || job.editorCommitted) throw new Error("撮り直しを開始できませんでした。");
+      await chrome.windows.update(tab.windowId, { focused: true });
+      await chrome.tabs.update(tab.id, { active: true });
+      if (activeCapture !== job || job.phase !== "editing" || job.cancelRequested || job.editorCommitted) throw new Error("撮り直しを開始できませんでした。");
+      job.editorCommitted = true;
+      reportCapture(job, { phase: "processing", cancellable: false });
+      job.editorResolve?.({ retry: true, tab });
+      return { ok: true };
+    })().then(sendResponse).catch(error => sendResponse({ ok: false, error: kiriT(error.message || "撮り直しを開始できませんでした。") })).finally(() => { job.editorRetakePending = false; });
+    return true;
+  }
   if (message?.type === "capture:editor:load" || message?.type === "capture:editor:commit") {
     const job = activeCapture;
     const validSender = sender?.url?.startsWith(chrome.runtime.getURL("editor.html")) && sender.tab?.id;
@@ -67,7 +89,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: true, url: job.previewUrl, format: job.editorOptions.format, destination: job.editorOptions.destination, meta: job.editorMeta, options: job.editorOptions });
       return false;
     }
-    if (job.editorCommitted || typeof message.url !== "string" || !message.url.startsWith(`blob:chrome-extension://${chrome.runtime.id}/`)) {
+    if (job.editorCommitted || job.editorRetakePending || typeof message.url !== "string" || !message.url.startsWith(`blob:chrome-extension://${chrome.runtime.id}/`)) {
       sendResponse({ ok: false, error: kiriT("編集画像を受け取れませんでした。") });
       return false;
     }
@@ -110,11 +132,12 @@ chrome.runtime.onConnect.addListener((port) => {
   }
   if (port.name !== "kiritori-editor") return;
   let linkedJob;
+  let linkedJobId;
   port.onMessage.addListener((message) => {
-    if (message?.type === "hello" && activeCapture?.id === message.jobId) linkedJob = activeCapture;
+    if (message?.type === "hello" && activeCapture?.id === message.jobId) { linkedJob = activeCapture; linkedJobId = message.jobId; }
   });
   port.onDisconnect.addListener(() => {
-    if (linkedJob && activeCapture === linkedJob && linkedJob.phase === "editing" && !linkedJob.editorCommitted) {
+    if (linkedJob && activeCapture === linkedJob && linkedJob.id === linkedJobId && linkedJob.phase === "editing" && !linkedJob.editorCommitted) {
       linkedJob.cancelRequested = true;
       reportCapture(linkedJob, { phase: "cancelling" });
       linkedJob.editorResolve?.(null);
@@ -245,9 +268,19 @@ async function startCapture(options, targetTab) {
   }
   reportCapture(job);
   try {
-    const result = await handleCapture(options, targetTab, job);
-    reportCapture(job, { active: false, phase: "completed", cancellable: false, message: result.message });
-    return result;
+    let captureTab = targetTab;
+    while (true) {
+      const result = await handleCapture(options, captureTab, job);
+      if (!result.retry) {
+        reportCapture(job, { active: false, phase: "completed", cancellable: false, message: result.message });
+        return result;
+      }
+      captureTab = result.tab;
+      job.id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+      job.editorTabId = null;
+      job.editorCommitted = false;
+      reportCapture(job, { phase: "preparing", currentFrame: 0, cancellable: ["full", "scroll-area"].includes(job.mode) });
+    }
   } catch (error) {
     if (job.offscreenStarted) await offscreenMessage({ type: "discard" }).catch(() => undefined);
     const cancelled = error?.name === "CaptureCancelled";
@@ -504,6 +537,11 @@ async function handleCapture(options, targetTab, job) {
       throwIfCancelled(job);
       const edited = await openCaptureEditor(job, options, preview.url, meta);
       throwIfCancelled(job);
+      if (edited.retry) {
+        await offscreenMessage({ type: "discard" });
+        job.offscreenStarted = false;
+        return { retry: true, tab: edited.tab };
+      }
       await offscreenMessage({ type: "replace-image", url: edited.url });
     } finally {
       await offscreenMessage({ type: "release", urls: [preview.url] }).catch(() => undefined);
@@ -560,7 +598,7 @@ async function openCaptureEditor(job, options, previewUrl, meta) {
   const result = await choice;
   job.editorResolve = null;
   throwIfCancelled(job);
-  if (!result?.url) throw new Error("編集した画像を受け取れませんでした。");
+  if (!result?.url && !result?.retry) throw new Error("編集した画像を受け取れませんでした。");
   return result;
 }
 

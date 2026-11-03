@@ -862,5 +862,23 @@
   },
   "m_598683d3d24646ac": {
     "message": "Could not save site settings."
+  },
+  "m_93f223ab8ae9e73a": {
+    "message": "Retake"
+  },
+  "m_1f5c1e9eccccb377": {
+    "message": "Preparing to retake…"
+  },
+  "m_8657fb9537e6696d": {
+    "message": "Could not start the retake."
+  },
+  "m_597148bd1422415e": {
+    "message": "The original capture tab could not be found."
+  },
+  "m_660b08ba209c8f19": {
+    "message": "The original page has changed. Reopen it and capture again."
+  },
+  "m_e2f1023e34294b3d": {
+    "message": "Retaking is unavailable for restored drafts. Capture again from the original page."
   }
 }
