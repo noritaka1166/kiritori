@@ -42,6 +42,15 @@
         <p class="note">実行中の処理が終わり次第、撮影を中止します。</p>
       </section>
 
+      <section class="capture-setting" aria-label="サイトごとの撮影設定">
+        <label class="toggle" for="site-settings-enabled">
+          <input id="site-settings-enabled" type="checkbox" disabled>
+          <span>このサイトの設定を保存</span>
+        </label>
+        <p id="site-settings-status" class="note" role="status"></p>
+        <p class="note">サイトごとに撮影設定を保存し、再訪時に適用します。チェックを外すとこのサイトの設定を削除します。</p>
+      </section>
+
       <label for="capture-mode">撮影範囲</label>
       <select id="capture-mode">
         <option value="viewport">表示中の範囲</option>

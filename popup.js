@@ -35,6 +35,10 @@ draftRetention.addEventListener("change", async () => {
   catch (_) { draftListStatus.textContent = kiriT("設定を保存できませんでした。"); }
 });
 draftClear.addEventListener("click", async () => { if (!draftDb) return; try { await draftDb.clear(); await refreshDrafts(); } catch (_) { draftListStatus.textContent = kiriT("下書きを削除できませんでした。"); } });
+const siteSettingsEnabled = document.querySelector("#site-settings-enabled");
+const siteSettingsStatus = document.querySelector("#site-settings-status");
+let siteHost = null;
+function siteKey(url) { try { const parsed = new URL(url); return ["http:", "https:"].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null; } catch (_) { return null; } }
 const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
 const destination = document.querySelector("#destination");
@@ -234,14 +238,19 @@ function currentSettings() {
 
 async function saveSettings() {
   const snapshot = currentSettings();
-  settingsWrite = settingsWrite
-    .catch(() => undefined)
-    .then(() => chrome.storage.local.set({ captureSettings: snapshot }));
+  const useSite = siteSettingsEnabled.checked && siteHost;
+  settingsWrite = settingsWrite.catch(() => undefined).then(async () => {
+    if (useSite) {
+      const data = await chrome.storage.local.get("siteCaptureSettings");
+      const profiles = Object.assign(Object.create(null), data.siteCaptureSettings && typeof data.siteCaptureSettings === "object" && !Array.isArray(data.siteCaptureSettings) ? data.siteCaptureSettings : {});
+      profiles[siteHost] = snapshot;
+      await chrome.storage.local.set({ siteCaptureSettings: profiles });
+    } else await chrome.storage.local.set({ captureSettings: snapshot });
+  });
   await settingsWrite;
 }
 
-async function loadSettings() {
-  const { captureSettings } = await chrome.storage.local.get("captureSettings");
+function applySettings(captureSettings) {
   if (captureSettings) {
     const settings = { ...defaults, ...captureSettings };
     if (["viewport", "region", "full", "scroll-area"].includes(settings.mode)) mode.value = settings.mode;
@@ -262,8 +271,35 @@ async function loadSettings() {
     removeAds.checked = localStorage.getItem("remove-ads") === "true";
   }
   updateControls();
-  await saveSettings();
 }
+
+async function loadSettings() {
+  const [tabs, data] = await Promise.all([chrome.tabs.query({ active: true, lastFocusedWindow: true }), chrome.storage.local.get(["captureSettings", "siteCaptureSettings"])]);
+  siteHost = siteKey(tabs[0]?.url);
+  const profiles = data.siteCaptureSettings;
+  const hasProfile = Boolean(siteHost && profiles && Object.prototype.hasOwnProperty.call(profiles, siteHost));
+  siteSettingsEnabled.disabled = !siteHost;
+  siteSettingsEnabled.checked = hasProfile;
+  siteSettingsStatus.textContent = siteHost ? kiriT("対象サイト: $1", siteHost) : kiriT("このページではサイト別設定を使えません。");
+  applySettings(hasProfile ? profiles[siteHost] : data.captureSettings);
+}
+
+siteSettingsEnabled.addEventListener("change", async () => {
+  if (!siteHost || !settingsLoaded) return;
+  siteSettingsEnabled.disabled = true;
+  try {
+    await settingsWrite.catch(() => undefined);
+    if (siteSettingsEnabled.checked) { await saveSettings(); }
+    else {
+      const data = await chrome.storage.local.get(["siteCaptureSettings", "captureSettings"]);
+      const profiles = Object.assign(Object.create(null), data.siteCaptureSettings && typeof data.siteCaptureSettings === "object" && !Array.isArray(data.siteCaptureSettings) ? data.siteCaptureSettings : {});
+      delete profiles[siteHost];
+      await chrome.storage.local.set({ siteCaptureSettings: profiles });
+      applySettings(data.captureSettings || defaults);
+    }
+  } catch (_) { siteSettingsStatus.textContent = kiriT("サイト別設定を保存できませんでした。"); }
+  finally { siteSettingsEnabled.disabled = false; }
+});
 
 function updateControls() {
   const isPdf = format.value === "pdf";

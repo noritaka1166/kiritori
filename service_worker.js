@@ -176,7 +176,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   };
   const mode = modeByMenuId[info.menuItemId];
   if (!mode || !tab?.id) return;
-  await runQuickCapture(tab, mode);
+  await runQuickCapture({ ...tab, url: tab.url || info.pageUrl }, mode);
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
@@ -597,7 +597,10 @@ async function runQuickCapture(tab, modeOverride) {
   if (!tab?.id) return;
   let captureStarted = false;
   try {
-    const { captureSettings } = await chrome.storage.local.get("captureSettings");
+    const { captureSettings, siteCaptureSettings } = await chrome.storage.local.get(["captureSettings", "siteCaptureSettings"]);
+    let host = null;
+    try { const parsed = new URL(tab.url); if (["http:", "https:"].includes(parsed.protocol)) host = parsed.hostname.toLowerCase(); } catch (_) {}
+    const siteSettings = host && siteCaptureSettings && Object.prototype.hasOwnProperty.call(siteCaptureSettings, host) ? siteCaptureSettings[host] : null;
     const options = {
       mode: "viewport",
       format: "png",
@@ -608,7 +611,8 @@ async function runQuickCapture(tab, modeOverride) {
       removeAds: false,
       manualHide: false,
       preview: true,
-      ...(captureSettings || {})
+      ...(captureSettings || {}),
+      ...(siteSettings || {})
     };
     if (modeOverride) options.mode = modeOverride;
     captureStarted = true;

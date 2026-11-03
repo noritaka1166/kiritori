@@ -844,5 +844,23 @@
   },
   "m_ae3f75d4c4aa2850": {
     "message": "Could not save settings."
+  },
+  "m_bcc61f0c7195b012": {
+    "message": "Site capture settings"
+  },
+  "m_296fc3a055e6a78f": {
+    "message": "Save settings for this site"
+  },
+  "m_9cf9d1d190f1f217": {
+    "message": "Save capture settings per site and apply them on return. Uncheck to delete this site’s settings."
+  },
+  "m_f413b901a1c1505e": {
+    "message": "Current site: $1"
+  },
+  "m_49283feed7f81b6e": {
+    "message": "Site settings are unavailable on this page."
+  },
+  "m_598683d3d24646ac": {
+    "message": "Could not save site settings."
   }
 }

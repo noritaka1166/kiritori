@@ -24,6 +24,8 @@ Drag to draw a **Rectangle**, **Ellipse**, or **Line** using the selected color 
 
 Choose an additional post-scroll wait: Fast (200 ms), Normal (600 ms), Slow (1500 ms), or a custom value from 0 to 10000 ms. The wait applies to page and scrollable-area capture, including context menu and shortcut capture. Scroll settling and Chrome capture limits can make the actual interval longer.
 
+Enable **Save settings for this site** to store capture options locally per hostname. They are used when reopening the popup and for shortcuts; context menu choices override only the capture mode. Uncheck to remove the site settings and return to the shared defaults. Subdomains are separate.
+
 Use the page context menu or the keyboard shortcut configured at `chrome://extensions/shortcuts` to capture with saved settings. The popup displays progress, cancellation, and up to ten recent capture failures.
 
 For full-page or scrollable-area PNG, JPEG, and PDF output, you can split the edited image by screen height. PNG and JPEG produce numbered files; PDF produces multiple pages. Set the capture limit from 1 to 200 screens (default 80); reaching it outputs the portion captured. The limits of 80 million pixels and 32,000 pixels on either side still apply, including when split output is selected. Some browser-internal pages and Chrome Web Store pages cannot be captured.
