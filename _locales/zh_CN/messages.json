@@ -790,5 +790,59 @@
   },
   "m_1a8773fcf59d8ff6": {
     "message": "马赛克颗粒大小（像素）"
+  },
+  "m_33c487fc3d688d74": {
+    "message": "编辑草稿保存期限"
+  },
+  "m_a886e24ec6a8812e": {
+    "message": "不保存"
+  },
+  "m_1dfeb4c346f8c3d0": {
+    "message": "1天"
+  },
+  "m_0b6537395ca0963e": {
+    "message": "7天"
+  },
+  "m_63b24ddf1a36058c": {
+    "message": "30天"
+  },
+  "m_9a0ec4c5d6f8e1e8": {
+    "message": "原始图像和编辑内容保存在此设备上。过期草稿将在下次打开KiriTori时删除。"
+  },
+  "m_7f7ccb69eea8d512": {
+    "message": "删除所有草稿"
+  },
+  "m_5321ed4046bde89d": {
+    "message": "已保存的草稿"
+  },
+  "m_b6b9c31c1944bf91": {
+    "message": "没有已保存的草稿。"
+  },
+  "m_31da7ca72306209b": {
+    "message": "恢复"
+  },
+  "m_e9653dc3edcbc072": {
+    "message": "删除"
+  },
+  "m_197dae3b2486a2da": {
+    "message": "无法读取草稿。"
+  },
+  "m_954f65938a8fc9b7": {
+    "message": "无法删除草稿。"
+  },
+  "m_5c2ae833e824744f": {
+    "message": "无法保存草稿。"
+  },
+  "m_c9f4b8347463ddd7": {
+    "message": "草稿不存在或已过期。"
+  },
+  "m_1db25d370d9c132f": {
+    "message": "正在保存草稿…"
+  },
+  "m_493d7ee310b63161": {
+    "message": "草稿已保存。"
+  },
+  "m_ae3f75d4c4aa2850": {
+    "message": "无法保存设置。"
   }
 }

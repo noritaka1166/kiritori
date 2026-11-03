@@ -1,4 +1,40 @@
 kiriLocalizeDocument();
+const draftRetention = document.querySelector("#draft-retention");
+const draftList = document.querySelector("#draft-list");
+const draftListStatus = document.querySelector("#draft-list-status");
+const draftClear = document.querySelector("#draft-clear");
+let draftDb;
+async function refreshDrafts() {
+  if (!draftDb) return;
+  try {
+    await draftDb.deleteExpired();
+    const drafts = (await draftDb.list()).sort((a,b) => b.updatedAt - a.updatedAt);
+    draftList.replaceChildren(); draftClear.hidden = drafts.length === 0;
+    draftListStatus.textContent = drafts.length ? kiriT("保存された下書き") : kiriT("保存された下書きはありません。");
+    for (const draft of drafts) {
+      const row = document.createElement("div"); row.className = "draft-row";
+      const title = document.createElement("span"); title.textContent = `${draft.meta?.title || "KiriTori"} · ${new Date(draft.updatedAt).toLocaleString(chrome.i18n.getUILanguage())}`;
+      const open = document.createElement("button"); open.type = "button"; open.textContent = kiriT("復元");
+      open.addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL(`editor.html?draft=${encodeURIComponent(draft.id)}`) }));
+      const remove = document.createElement("button"); remove.type = "button"; remove.textContent = kiriT("削除");
+      remove.addEventListener("click", async () => { try { await draftDb.delete(draft.id); await refreshDrafts(); } catch (_) { draftListStatus.textContent = kiriT("下書きを削除できませんでした。"); } });
+      row.append(title, open, remove); draftList.append(row);
+    }
+  } catch (_) { draftListStatus.textContent = kiriT("下書きを読み込めませんでした。"); }
+}
+(async () => {
+  try {
+    draftDb = (await import("./draft-store.js")).draftStore;
+    const settings = await chrome.storage.local.get("draftRetentionDays");
+    draftRetention.value = String([0, 1, 7, 30].includes(settings.draftRetentionDays) ? settings.draftRetentionDays : 7);
+    await refreshDrafts();
+  } catch (_) { draftListStatus.textContent = kiriT("下書きを読み込めませんでした。"); }
+})();
+draftRetention.addEventListener("change", async () => {
+  try { await chrome.storage.local.set({ draftRetentionDays: Number(draftRetention.value) }); }
+  catch (_) { draftListStatus.textContent = kiriT("設定を保存できませんでした。"); }
+});
+draftClear.addEventListener("click", async () => { if (!draftDb) return; try { await draftDb.clear(); await refreshDrafts(); } catch (_) { draftListStatus.textContent = kiriT("下書きを削除できませんでした。"); } });
 const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
 const destination = document.querySelector("#destination");

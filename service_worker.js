@@ -1,4 +1,5 @@
 import "./i18n.js";
+import { draftStore } from "./draft-store.js";
 
 let offscreenCreation;
 let activeCapture = null;
@@ -7,6 +8,7 @@ let captureRevision = 0;
 const badgeTimers = new Map();
 const failureHistoryKey = "captureFailureHistory";
 let failureHistoryWrite = Promise.resolve();
+const draftUpdateQueues = new Map();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.target === "offscreen") return false;
@@ -62,7 +64,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     job.editorTabId = sender.tab.id;
     if (message.type === "capture:editor:load") {
-      sendResponse({ ok: true, url: job.previewUrl, format: job.editorOptions.format, destination: job.editorOptions.destination });
+      sendResponse({ ok: true, url: job.previewUrl, format: job.editorOptions.format, destination: job.editorOptions.destination, meta: job.editorMeta, options: job.editorOptions });
       return false;
     }
     if (job.editorCommitted || typeof message.url !== "string" || !message.url.startsWith(`blob:chrome-extension://${chrome.runtime.id}/`)) {
@@ -74,6 +76,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     job.editorResolve?.({ url: message.url });
     sendResponse({ ok: true });
     return false;
+  }
+  if (message?.type === "draft:update") {
+    const valid = sender?.url?.startsWith(chrome.runtime.getURL("editor.html")) && sender.tab?.id;
+    if (!valid || typeof message.id !== "string" || !Array.isArray(message.history) || !Array.isArray(message.redoStack) || ![1, 7, 30].includes(message.retentionDays)) { sendResponse({ ok: false }); return false; }
+    const previous = draftUpdateQueues.get(message.id) || Promise.resolve();
+    const update = previous.catch(() => undefined).then(() => {
+      const now = Date.now();
+      return draftStore.update(message.id, { history: message.history, redoStack: message.redoStack, retentionDays: message.retentionDays, updatedAt: now, expiresAt: now + message.retentionDays * 86400000 });
+    });
+    draftUpdateQueues.set(message.id, update);
+    update.then(found => sendResponse({ ok: found })).catch(() => sendResponse({ ok: false })).finally(() => { if (draftUpdateQueues.get(message.id) === update) draftUpdateQueues.delete(message.id); });
+    return true;
+  }
+  if (message?.type === "draft:export") {
+    const valid = sender?.url?.startsWith(chrome.runtime.getURL("editor.html")) && sender.tab?.id;
+    if (!valid || typeof message.url !== "string" || !message.url.startsWith(`blob:chrome-extension://${chrome.runtime.id}/`)) { sendResponse({ ok: false, error: kiriT("画像を出力できませんでした。") }); return false; }
+    exportRecoveredDraft(message.id, message.url).then(result => sendResponse({ ok: true, message: result })).catch(error => sendResponse({ ok: false, error: explainError(error) }));
+    return true;
   }
   if (message?.type !== "capture:start") return false;
 
@@ -482,7 +502,7 @@ async function handleCapture(options, targetTab, job) {
     const preview = await offscreenMessage({ type: "preview" });
     try {
       throwIfCancelled(job);
-      const edited = await openCaptureEditor(job, options, preview.url);
+      const edited = await openCaptureEditor(job, options, preview.url, meta);
       throwIfCancelled(job);
       await offscreenMessage({ type: "replace-image", url: edited.url });
     } finally {
@@ -526,10 +546,11 @@ async function handleCapture(options, targetTab, job) {
   return { message: successMessage(options, saved, copied) + (reachedLimit ? " · " + kiriT("$1画面の上限まで撮影しました。続きは含まれていません。", maxFrames) : "") };
 }
 
-async function openCaptureEditor(job, options, previewUrl) {
+async function openCaptureEditor(job, options, previewUrl, meta) {
   const choice = new Promise((resolve) => { job.editorResolve = resolve; });
   job.previewUrl = previewUrl;
-  job.editorOptions = { format: options.format, destination: options.destination };
+  job.editorOptions = { ...options };
+  job.editorMeta = meta;
   job.editorCommitted = false;
   reportCapture(job, { phase: "editing", cancellable: true });
   const editorTab = await chrome.tabs.create({ url: `${chrome.runtime.getURL("editor.html")}?job=${encodeURIComponent(job.id)}` });
@@ -541,6 +562,35 @@ async function openCaptureEditor(job, options, previewUrl) {
   throwIfCancelled(job);
   if (!result?.url) throw new Error("編集した画像を受け取れませんでした。");
   return result;
+}
+
+async function exportRecoveredDraft(id, url) {
+  if (activeCapture) throw new Error("別の撮影が進行中です。完了またはキャンセルを待ってください。");
+  const job = { id: `draft-${id}`, active: true, mode: null, phase: "processing", currentFrame: 0, cancellable: false, cancelRequested: false, revision: 0 };
+  activeCapture = job; reportCapture(job);
+  try {
+    await (draftUpdateQueues.get(id) || Promise.resolve()).catch(() => undefined);
+    const draft = await draftStore.get(id);
+    if (!draft || draft.expiresAt <= Date.now()) throw new Error("編集する画像が見つかりません。");
+    job.mode = draft.meta.mode;
+    await offscreenMessage({ type: "begin", meta: draft.meta, options: draft.options, scale: draft.scale });
+    await offscreenMessage({ type: "replace-image", url });
+    const artifact = await offscreenMessage({ type: "finish" });
+    const options = draft.options; let saved = 0; let copied = false;
+    if (options.destination === "copy" || options.destination === "both") { await offscreenMessage({ type: "copy", clipboard: artifact.clipboard }); copied = true; }
+    if (options.destination === "save" || options.destination === "both") {
+      const folder = normalizeFolder(options.folder);
+      for (const file of artifact.files) {
+        const filename = [folder, `${options.fileStem}${file.suffix}`].filter(Boolean).join("/");
+        const downloadId = await chrome.downloads.download({ url: file.url, filename, conflictAction: "uniquify", saveAs: false });
+        saved += 1; releaseUrlAfterDownload(downloadId, file.url);
+      }
+    } else await offscreenMessage({ type: "release", urls: artifact.files.map(file => file.url) });
+    return successMessage(options, saved, copied);
+  } catch (error) {
+    await offscreenMessage({ type: "discard" }).catch(() => undefined);
+    throw error;
+  } finally { reportCapture(job, { active: false, cancellable: false }); if (activeCapture === job) activeCapture = null; }
 }
 
 async function runQuickCapture(tab, modeOverride) {

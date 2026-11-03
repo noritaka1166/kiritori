@@ -6,7 +6,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "begin") {
     try {
-      captureState = { meta: message.meta, options: message.options, canvas: null, context: null, scale: 1, coveredBottom: 0 };
+      captureState = { meta: message.meta, options: message.options, canvas: null, context: null, scale: Number.isFinite(message.scale) && message.scale > 0 ? message.scale : 1, coveredBottom: 0 };
       sendResponse({ ok: true });
     } catch (error) {
       sendResponse({ ok: false, error: error.message });
@@ -84,7 +84,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 async function replaceImage(url) {
-  if (!captureState?.canvas) throw new Error("編集対象がありません。");
+  if (!captureState) throw new Error("編集対象がありません。");
   const response = await fetch(url);
   if (!response.ok) throw new Error("編集画像を読み取れませんでした。");
   const bitmap = await createImageBitmap(await response.blob());

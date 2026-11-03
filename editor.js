@@ -1,5 +1,6 @@
 kiriLocalizeDocument();
 const jobId = new URLSearchParams(location.search).get("job");
+const restoredDraftId = new URLSearchParams(location.search).get("draft");
 const canvas = document.querySelector("#canvas");
 const wrap = document.querySelector("#canvas-wrap");
 const overlay = document.querySelector("#overlay");
@@ -8,6 +9,7 @@ const ellipsePreview = document.querySelector("#ellipse-preview");
 const arrowPreview = document.querySelector("#arrow-preview");
 const arrowHead = document.querySelector("#arrow-head-path");
 const hint = document.querySelector("#hint");
+const draftStatus = document.querySelector("#draft-status");
 const colorInput = document.querySelector("#color");
 const presetColors = document.querySelector("#preset-colors");
 const savedColorsRow = document.querySelector("#saved-colors-row");
@@ -45,6 +47,30 @@ const textRotateHandle = document.querySelector("#text-rotate-handle");
 const textRotateLine = document.querySelector("#text-rotate-line");
 const toolButtons = [...document.querySelectorAll("[data-tool]")];
 const context = canvas.getContext("2d", { alpha: false });
+let draftDb, draftData, draftSourceUrl;
+let draftWrite = Promise.resolve();
+let draftClosed = false;
+let draftRevision = 0;
+function saveDraft() {
+  if (!draftDb || !draftData || draftClosed || !history.length) return;
+  const savedHistory = JSON.parse(JSON.stringify(history));
+  if (inlineEdit) {
+    const value = inlineText.value.trim().slice(0, 200);
+    const operations = savedHistory[savedHistory.length - 1].operations;
+    if (inlineEdit.index === null && value) operations.push({ ...inlineEdit.item, text: value });
+    else if (inlineEdit.index !== null && operations[inlineEdit.index]) { if (value) operations[inlineEdit.index].text = value; else operations.splice(inlineEdit.index, 1); }
+  }
+  const revision = ++draftRevision;
+  draftStatus.textContent = kiriT("下書きを保存中…");
+  const update = chrome.runtime.sendMessage({ type: "draft:update", id: draftData.id, history: savedHistory, redoStack: JSON.parse(JSON.stringify(redoStack)), retentionDays: draftData.retentionDays }).then((response) => { if (!response?.ok) throw new Error("Draft update failed"); });
+  draftWrite = Promise.all([draftWrite.catch(() => undefined), update]).then(() => undefined);
+  draftWrite.then(() => { if (revision === draftRevision) draftStatus.textContent = kiriT("下書きを保存しました。"); }).catch(() => { if (revision === draftRevision) draftStatus.textContent = kiriT("下書きを保存できませんでした。"); });
+}
+async function deleteDraft() {
+  draftClosed = true;
+  await draftWrite.catch(() => undefined);
+  if (draftDb && draftData) await draftDb.delete(draftData.id);
+}
 let sourceImage;
 let history = [];
 let redoStack = [];
@@ -354,7 +380,7 @@ function finishInlineText() {
   hint.textContent = labels[tool];
 }
 
-inlineText.addEventListener("input", positionInlineText);
+inlineText.addEventListener("input", () => { positionInlineText(); saveDraft(); });
 inlineText.addEventListener("blur", finishInlineText);
 inlineText.addEventListener("keydown", (event) => {
   if (event.isComposing || event.keyCode === 229) return;
@@ -536,6 +562,7 @@ function addState(next) {
   redoStack = [];
   history.push(next);
   render();
+  saveDraft();
 }
 
 function clearOverlay() {
@@ -729,6 +756,7 @@ function navigateHistory(direction) {
   if (direction === "undo" && history.length > 1) redoStack.push(history.pop());
   else if (direction === "redo" && redoStack.length) history.push(redoStack.pop());
   render();
+  saveDraft();
 }
 
 undoButton.addEventListener("click", () => navigateHistory("undo"));
@@ -836,8 +864,11 @@ exportButton.addEventListener("click", async () => {
   try {
     const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error(kiriT("画像を作成できませんでした。"))), "image/png"));
     outputUrl = URL.createObjectURL(blob);
-    const response = await chrome.runtime.sendMessage({ type: "capture:editor:commit", jobId, url: outputUrl });
+    const response = restoredDraftId
+      ? await chrome.runtime.sendMessage({ type: "draft:export", id: restoredDraftId, url: outputUrl })
+      : await chrome.runtime.sendMessage({ type: "capture:editor:commit", jobId, url: outputUrl });
     if (!response?.ok) throw new Error(response?.error || kiriT("画像を出力できませんでした。"));
+    if (restoredDraftId) { draftClosed = true; await draftWrite.catch(() => undefined); terminal = true; hint.textContent = response.message || kiriT("出力しました。"); cancelButton.disabled = false; cancelButton.textContent = kiriT("閉じる"); }
   } catch (error) {
     submitted = false;
     setEditingDisabled(false);
@@ -847,7 +878,7 @@ exportButton.addEventListener("click", async () => {
 });
 
 cancelButton.addEventListener("click", async () => {
-  if (terminal) {
+  if (terminal || restoredDraftId) {
     try {
       const tab = await chrome.tabs.getCurrent();
       if (tab?.id) await chrome.tabs.remove(tab.id);
@@ -859,6 +890,7 @@ cancelButton.addEventListener("click", async () => {
   try {
     const result = await chrome.runtime.sendMessage({ type: "capture:cancel", jobId });
     if (!result?.ok) throw new Error(result?.error || kiriT("キャンセルできませんでした。"));
+    await deleteDraft().catch(() => undefined);
     if (!terminal) hint.textContent = kiriT("キャンセルしています…");
   } catch (error) {
     cancelButton.disabled = false;
@@ -871,6 +903,7 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message?.type !== "capture:progress" || state?.jobId !== jobId || state.active) return;
   if (inlineEdit) finishInlineText();
   terminal = true;
+  if (state.phase === "completed") draftClosed = true;
   clearInterval(heartbeat);
   hint.textContent = state.message || (state.phase === "completed" ? kiriT("出力しました。") : kiriT("撮影を終了しました。"));
   cancelButton.disabled = false;
@@ -882,10 +915,25 @@ chrome.runtime.onMessage.addListener((message) => {
 window.addEventListener("beforeunload", () => {
   clearInterval(heartbeat);
   if (outputUrl) URL.revokeObjectURL(outputUrl);
+  if (draftSourceUrl) URL.revokeObjectURL(draftSourceUrl);
 });
 
 async function initialize() {
-  if (!jobId || !context) throw new Error(kiriT("編集する画像が見つかりません。"));
+  if ((!jobId && !restoredDraftId) || !context) throw new Error(kiriT("編集する画像が見つかりません。"));
+  try { draftDb = (await import("./draft-store.js")).draftStore; await draftDb.deleteExpired(); } catch (_) { draftStatus.textContent = kiriT("下書きを保存できませんでした。"); }
+  if (restoredDraftId) {
+    if (!draftDb) throw new Error(kiriT("下書きを読み込めませんでした。"));
+    draftData = await draftDb.get(restoredDraftId);
+    if (!draftData || draftData.expiresAt <= Date.now()) throw new Error(kiriT("下書きが見つからないか、保存期限が過ぎています。"));
+    const settings = await chrome.storage.local.get("draftRetentionDays");
+    const retentionDays = [0, 1, 7, 30].includes(settings.draftRetentionDays) ? settings.draftRetentionDays : 7;
+    if (retentionDays === 0) draftClosed = true;
+    else draftData.retentionDays = retentionDays;
+    draftSourceUrl = URL.createObjectURL(draftData.source); sourceImage = new Image(); sourceImage.src = draftSourceUrl; await sourceImage.decode();
+    history = draftData.history; redoStack = draftData.redoStack || []; render();
+    exportButton.textContent = ({ save: kiriT("保存"), copy: kiriT("コピー"), both: kiriT("保存してコピー") })[draftData.options.destination] || kiriT("出力");
+    exportButton.disabled = false; cancelButton.textContent = kiriT("閉じる"); selectTool("crop"); return;
+  }
   port = chrome.runtime.connect({ name: "kiritori-editor" });
   port.onDisconnect.addListener(() => {
     if (terminal) return;
@@ -915,6 +963,20 @@ async function initialize() {
   await sourceImage.decode();
   if (terminal) return;
   history = [{ crop: { x: 0, y: 0, width: sourceImage.naturalWidth, height: sourceImage.naturalHeight }, operations: [] }];
+  if (draftDb && response.meta && response.options) {
+    try {
+      const settings = await chrome.storage.local.get("draftRetentionDays");
+      const retentionDays = [0, 1, 7, 30].includes(settings.draftRetentionDays) ? settings.draftRetentionDays : 7;
+      if (retentionDays > 0) {
+        const source = await (await fetch(response.url)).blob();
+        const width = response.meta.mode === "scroll-area" ? response.meta.scrollArea.clientWidth : response.meta.mode === "region" ? response.meta.region.width : response.meta.viewportWidth;
+        draftData = { id: jobId, source, meta: response.meta, options: response.options, scale: sourceImage.naturalWidth / width, retentionDays };
+        const now = Date.now();
+        await draftDb.put({ ...draftData, history, redoStack, updatedAt: now, expiresAt: now + retentionDays * 86400000 });
+        draftStatus.textContent = kiriT("下書きを保存しました。");
+      }
+    } catch (_) { draftStatus.textContent = kiriT("下書きを保存できませんでした。"); }
+  }
   render();
   exportButton.textContent = ({ save: kiriT("保存"), copy: kiriT("コピー"), both: kiriT("保存してコピー") })[response.destination] || kiriT("出力");
   exportButton.disabled = false;

@@ -13,6 +13,20 @@
         <p>ページの内容は外部へ送信しません。</p>
       </header>
 
+      <section id="draft-settings" class="capture-setting">
+        <label for="draft-retention">編集下書きの保存期間</label>
+        <select id="draft-retention">
+          <option value="0">保存しない</option>
+          <option value="1">1日</option>
+          <option value="7" selected>7日</option>
+          <option value="30">30日</option>
+        </select>
+        <p class="note">元画像と編集内容をこの端末に保存します。期限切れの下書きは次にKiriToriを開いたときに削除します。</p>
+        <p id="draft-list-status" class="note" role="status"></p>
+        <div id="draft-list"></div>
+        <button id="draft-clear" type="button" hidden>下書きをすべて削除</button>
+      </section>
+
       <section id="failure-history" class="failure-history" hidden aria-labelledby="failure-heading">
         <h2 id="failure-heading">撮影の失敗履歴</h2>
         <p class="failure-note">最近の失敗を最大10件、この端末に保存します。</p>
