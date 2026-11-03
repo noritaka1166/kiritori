@@ -880,5 +880,14 @@
   },
   "m_e2f1023e34294b3d": {
     "message": "Retaking is unavailable for restored drafts. Capture again from the original page."
+  },
+  "m_d5b5e20dd3f6910f": {
+    "message": "Number marker"
+  },
+  "m_3284d78147e75045": {
+    "message": "Click the image to place numbered markers in order."
+  },
+  "m_829c211f47bde9f0": {
+    "message": "Adjust number marker"
   }
 }

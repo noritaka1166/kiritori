@@ -116,7 +116,7 @@ function applyColor(color) {
   colorInput.value = normalized;
   syncPalette();
   const item = selectedIndex === null ? null : currentState()?.operations[selectedIndex];
-  if (tool === "select" && item && ["text", "arrow", "line", "rect", "ellipse"].includes(item.type) && item.color.toLowerCase() !== normalized) {
+  if (tool === "select" && item && ["text", "arrow", "line", "rect", "ellipse", "number"].includes(item.type) && item.color.toLowerCase() !== normalized) {
     updateSelectedObject((selected) => { selected.color = normalized; });
   }
 }
@@ -209,6 +209,7 @@ const labels = {
   rect: kiriT("四角を描く範囲をドラッグしてください。"),
   ellipse: kiriT("丸を描く範囲をドラッグしてください。"),
   text: kiriT("画像上の文字を入れたい場所をクリックして入力してください。Enterで確定します。"),
+  number: kiriT("画像をクリックすると、番号を順番に配置します。"),
   mosaic: kiriT("ぼかしたい範囲をドラッグしてください。"),
   redact: kiriT("隠したい範囲をドラッグしてください。不透明に塗りつぶします。"),
   marker: kiriT("強調したい範囲をドラッグしてください。半透明の色で塗ります。")
@@ -249,6 +250,7 @@ function render(state = currentState(), excludedIndex = null) {
     if (operation.type === "arrow") drawArrow(operation, crop);
     if (["line", "rect", "ellipse"].includes(operation.type)) drawShape(operation, crop);
     if (operation.type === "text") drawText(operation, crop);
+    if (operation.type === "number") drawNumberMarker(operation, crop);
     if (operation.type === "mosaic") drawMosaic(operation, crop);
     if (operation.type === "redact" || operation.type === "marker") drawFilledRectangle(operation, crop);
   }
@@ -290,6 +292,18 @@ function drawShape(item, crop) {
   }
   context.stroke();
   context.restore();
+}
+
+function drawNumberMarker(item, crop) {
+  const radius = item.size / 2;
+  const rgb = item.color.match(/[0-9a-f]{2}/gi).map(value => parseInt(value, 16));
+  const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
+  context.save(); context.fillStyle = item.color; context.beginPath();
+  context.arc(item.x - crop.x, item.y - crop.y, radius, 0, Math.PI * 2); context.fill();
+  context.fillStyle = brightness >= 160 ? "#000000" : "#ffffff";
+  context.font = `bold ${Math.max(8, item.size * (item.number >= 100 ? .40 : .55))}px -apple-system, BlinkMacSystemFont, sans-serif`;
+  context.textAlign = "center"; context.textBaseline = "middle";
+  context.fillText(String(item.number), item.x - crop.x, item.y - crop.y, item.size * .85); context.restore();
 }
 
 function drawText(item, crop) {
@@ -410,6 +424,7 @@ function hitObject(point, state) {
   const radius = hitRadius();
   for (let index = state.operations.length - 1; index >= 0; index -= 1) {
     const item = state.operations[index];
+    if (item.type === "number" && Math.hypot(point.x - item.x, point.y - item.y) <= item.size / 2 + radius / 2) return index;
     if (item.type === "redact" && point.x >= item.x && point.x <= item.x + item.width && point.y >= item.y && point.y <= item.y + item.height) return null;
     if (["arrow", "line"].includes(item.type) && distanceToSegment(point, item) <= Math.max(radius, item.size * .3)) return index;
     if (item.type === "rect") {
@@ -442,13 +457,13 @@ function hideObjectSelection() {
 function renderObjectSelection(state) {
   if (inlineEdit) { hideObjectSelection(); return; }
   const item = tool === "select" && selectedIndex !== null ? state.operations[selectedIndex] : null;
-  if (!item || !["text", "arrow", "line", "rect", "ellipse"].includes(item.type)) {
+  if (!item || !["text", "arrow", "line", "rect", "ellipse", "number"].includes(item.type)) {
     hideObjectSelection();
     objectControls.hidden = true;
     return;
   }
   objectControls.hidden = false;
-  objectLabel.textContent = ({ arrow: kiriT("矢印を調整"), text: kiriT("文字を調整"), line: kiriT("直線を調整"), rect: kiriT("四角を調整"), ellipse: kiriT("丸を調整") })[item.type];
+  objectLabel.textContent = ({ arrow: kiriT("矢印を調整"), text: kiriT("文字を調整"), line: kiriT("直線を調整"), rect: kiriT("四角を調整"), ellipse: kiriT("丸を調整"), number: kiriT("番号マーカーを調整") })[item.type];
   if (colorInput.value.toLowerCase() !== item.color.toLowerCase()) {
     colorInput.value = item.color;
     syncPalette();
@@ -457,7 +472,7 @@ function renderObjectSelection(state) {
   const isLine = ["arrow", "line"].includes(item.type);
   const angle = isLine ? Math.atan2(item.y2 - item.y1, item.x2 - item.x1) * 180 / Math.PI : item.angle || 0;
   objectAngle.value = Math.round(angle);
-  objectAngleLabel.hidden = ["rect", "ellipse"].includes(item.type);
+  objectAngleLabel.hidden = ["rect", "ellipse", "number"].includes(item.type);
   objectLengthLabel.hidden = !isLine;
   objectTextLabel.hidden = item.type !== "text";
   objectLength.value = isLine ? Math.round(Math.hypot(item.x2 - item.x1, item.y2 - item.y1)) : "";
@@ -496,6 +511,11 @@ function renderObjectSelection(state) {
     textRotateLine.setAttribute("x1", origin.x - crop.x); textRotateLine.setAttribute("y1", origin.y - crop.y);
     textRotateLine.setAttribute("x2", rotate.x - crop.x); textRotateLine.setAttribute("y2", rotate.y - crop.y);
     textRotateLine.setAttribute("visibility", "visible");
+  } else if (item.type === "number") {
+    for (const shape of [objectLine, objectStart, objectEnd, textResizeHandle, textRotateHandle, textRotateLine]) shape.setAttribute("visibility", "hidden");
+    objectBox.setAttribute("visibility", "visible");
+    objectBox.setAttribute("x", item.x - item.size / 2 - crop.x); objectBox.setAttribute("y", item.y - item.size / 2 - crop.y);
+    objectBox.setAttribute("width", item.size); objectBox.setAttribute("height", item.size); objectBox.setAttribute("transform", "");
   } else {
     for (const shape of [objectLine, objectStart, objectEnd, textRotateHandle, textRotateLine]) shape.setAttribute("visibility", "hidden");
     objectBox.setAttribute("visibility", "visible");
@@ -661,6 +681,14 @@ canvas.addEventListener("pointerdown", (event) => {
     const dragStart = point(event);
     drag = { start: dragStart, current: dragStart, index, handle, base: state };
     canvas.setPointerCapture(event.pointerId);
+    return;
+  }
+  if (tool === "number") {
+    event.preventDefault();
+    const next = cloneState();
+    const number = next.operations.reduce((max, item) => item.type === "number" ? Math.max(max, item.number) : max, 0) + 1;
+    next.operations.push({ type: "number", x: start.x, y: start.y, size: size(), color: colorInput.value, number });
+    addState(next);
     return;
   }
   if (tool === "text") {

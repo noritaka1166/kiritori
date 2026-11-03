@@ -22,6 +22,8 @@ Choose a basic color or use the color picker for text and arrows. Save up to 12 
 
 Use **Fill** and drag over an area to cover it with an opaque rectangle in the selected color. Use **Marker** to highlight with a translucent color; the content remains visible. Before sharing, check that every sensitive part is covered. Markdown also includes the page title and URL.
 
+Choose **Number marker** and click the image to place sequential numbered circles. Choose their color and size, then use Select and adjust to move, recolor, resize or delete them. The next number follows the highest existing number.
+
 Drag to draw a **Rectangle**, **Ellipse**, or **Line** using the selected color and size. Use **Select and adjust** to move, recolor, or delete a shape; drag the white handle to resize a rectangle or ellipse, or drag either end of a line. Undo and redo are available via buttons or Cmd+Z / Cmd+Shift+Z on Mac and Ctrl+Z / Ctrl+Shift+Z or Ctrl+Y on Windows. Reset can also be undone.
 
 Choose an additional post-scroll wait: Fast (200 ms), Normal (600 ms), Slow (1500 ms), or a custom value from 0 to 10000 ms. The wait applies to page and scrollable-area capture, including context menu and shortcut capture. Scroll settling and Chrome capture limits can make the actual interval longer.
