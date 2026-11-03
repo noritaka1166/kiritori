@@ -74,9 +74,6 @@
   "m_376d700ce978c6d1": {
     "message": "PNG and JPEG use numbered images; PDF uses multiple pages. Copy uses the whole image."
   },
-  "m_6f6ac8b640c46385": {
-    "message": "Not applied to Markdown or copy-only output."
-  },
   "m_17f4ef2fe14b7cc5": {
     "message": "Capture options"
   },
@@ -572,9 +569,6 @@
   "m_244b85c01afa273c": {
     "message": "Open the extension icon for details."
   },
-  "m_960aea99a4009c37": {
-    "message": "Markdown (MD)"
-  },
   "m_8e823863ccb42c9b": {
     "message": "Color settings"
   },
@@ -889,5 +883,11 @@
   },
   "m_829c211f47bde9f0": {
     "message": "Adjust number marker"
+  },
+  "m_57b8fc274f106bc6": {
+    "message": "English"
+  },
+  "m_3636fb55b1567a31": {
+    "message": "Not applied when only copying to the clipboard."
   }
 }

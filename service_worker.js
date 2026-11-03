@@ -297,7 +297,7 @@ async function handleCapture(options, targetTab, job) {
   if (!options || !["viewport", "region", "full", "scroll-area"].includes(options.mode)) {
     throw new Error("撮影範囲を選び直してください。");
   }
-  if (!["png", "jpeg", "pdf", "md"].includes(options.format)) {
+  if (!["png", "jpeg", "pdf"].includes(options.format)) {
     throw new Error("出力形式を選び直してください。");
   }
   if (!["save", "copy", "both"].includes(options.destination)) {
@@ -611,10 +611,11 @@ async function exportRecoveredDraft(id, url) {
     const draft = await draftStore.get(id);
     if (!draft || draft.expiresAt <= Date.now()) throw new Error("編集する画像が見つかりません。");
     job.mode = draft.meta.mode;
-    await offscreenMessage({ type: "begin", meta: draft.meta, options: draft.options, scale: draft.scale });
+    const options = draft.options;
+    await offscreenMessage({ type: "begin", meta: draft.meta, options, scale: draft.scale });
     await offscreenMessage({ type: "replace-image", url });
     const artifact = await offscreenMessage({ type: "finish" });
-    const options = draft.options; let saved = 0; let copied = false;
+    let saved = 0; let copied = false;
     if (options.destination === "copy" || options.destination === "both") { await offscreenMessage({ type: "copy", clipboard: artifact.clipboard }); copied = true; }
     if (options.destination === "save" || options.destination === "both") {
       const folder = normalizeFolder(options.folder);

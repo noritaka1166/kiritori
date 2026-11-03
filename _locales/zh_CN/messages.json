@@ -74,9 +74,6 @@
   "m_376d700ce978c6d1": {
     "message": "PNG和JPEG保存为编号图片，PDF保存为多页。复制时使用完整图片。"
   },
-  "m_6f6ac8b640c46385": {
-    "message": "不适用于Markdown或仅复制输出。"
-  },
   "m_17f4ef2fe14b7cc5": {
     "message": "截图选项"
   },
@@ -572,9 +569,6 @@
   "m_244b85c01afa273c": {
     "message": "打开扩展程序图标查看详情。"
   },
-  "m_960aea99a4009c37": {
-    "message": "Markdown（MD）"
-  },
   "m_8e823863ccb42c9b": {
     "message": "颜色设置"
   },
@@ -889,5 +883,11 @@
   },
   "m_829c211f47bde9f0": {
     "message": "调整数字标记"
+  },
+  "m_57b8fc274f106bc6": {
+    "message": "英语"
+  },
+  "m_3636fb55b1567a31": {
+    "message": "仅复制到剪贴板时不适用。"
   }
 }

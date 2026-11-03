@@ -10,7 +10,7 @@ The interface follows Chrome's display language: English, Japanese, Simplified C
 2. Select **Load unpacked** and choose this folder.
 3. Open KiriTori from the Chrome toolbar.
 
-Capture the visible area, a selected region, a vertically scrolling page, or a scrollable area inside a page such as a table. For a scrollable area, select it on the page; KiriTori scrolls that area and stitches its visible width from top to bottom, then restores its original scroll position. Sticky headers inside the area appear only in the first frame to avoid repeating them. The whole area must fit in the viewport when selected. Horizontal overflow and scroll areas inside frames are not captured. Choose PNG, JPEG, PDF, or Markdown; save under Downloads or copy to the clipboard. PDF is save-only. Markdown contains the capture image and page metadata, not OCR text.
+Capture the visible area, a selected region, a vertically scrolling page, or a scrollable area inside a page such as a table. For a scrollable area, select it on the page; KiriTori scrolls that area and stitches its visible width from top to bottom, then restores its original scroll position. Sticky headers inside the area appear only in the first frame to avoid repeating them. The whole area must fit in the viewport when selected. Horizontal overflow and scroll areas inside frames are not captured. Choose PNG, JPEG, or PDF; save under Downloads or copy to the clipboard. PDF is save-only.
 
 The popup provides local editor drafts. Choose no saving or retention for 1, 7, or 30 days (default 7). Drafts contain the original image and edits; restore or delete individual drafts, or delete all drafts from the popup. Drafts remain after output until their expiry or deletion. Expired drafts are removed the next time KiriTori opens. Retention changes apply to subsequently opened editors.
 
@@ -20,7 +20,7 @@ In a fresh capture preview, **Retake** captures the original tab again with the 
 
 Choose a basic color or use the color picker for text and arrows. Save up to 12 custom colors locally for later use; remove a saved color with the adjacent × button. Select an existing annotation before choosing a color to change it.
 
-Use **Fill** and drag over an area to cover it with an opaque rectangle in the selected color. Use **Marker** to highlight with a translucent color; the content remains visible. Before sharing, check that every sensitive part is covered. Markdown also includes the page title and URL.
+Use **Fill** and drag over an area to cover it with an opaque rectangle in the selected color. Use **Marker** to highlight with a translucent color; the content remains visible. Before sharing, check that every sensitive part is covered.
 
 Choose **Number marker** and click the image to place sequential numbered circles. Choose their color and size, then use Select and adjust to move, recolor, resize or delete them. The next number follows the highest existing number.
 

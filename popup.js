@@ -254,7 +254,7 @@ function applySettings(captureSettings) {
   if (captureSettings) {
     const settings = { ...defaults, ...captureSettings };
     if (["viewport", "region", "full", "scroll-area"].includes(settings.mode)) mode.value = settings.mode;
-    if (["png", "jpeg", "pdf", "md"].includes(settings.format)) format.value = settings.format;
+    format.value = ["png", "jpeg", "pdf"].includes(settings.format) ? settings.format : "png";
     if (["save", "copy", "both"].includes(settings.destination)) destination.value = settings.destination;
     if (["title-date", "date-site-title", "site-date-title"].includes(settings.filenamePattern)) filenamePattern.value = settings.filenamePattern;
     splitOutput.checked = settings.splitOutput === true;
@@ -314,7 +314,7 @@ function updateControls() {
   }
   if (isPdf && destination.value !== "save") destination.value = "save";
   folderRow.hidden = destination.value === "copy";
-  splitSetting.hidden = !["full", "scroll-area"].includes(mode.value) || format.value === "md" || destination.value === "copy";
+  splitSetting.hidden = !["full", "scroll-area"].includes(mode.value) || destination.value === "copy";
 }
 
 mode.addEventListener("change", () => { updateControls(); saveSettings(); });

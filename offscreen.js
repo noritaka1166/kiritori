@@ -222,17 +222,15 @@ function expandFullPageCanvas(requiredHeight) {
 async function finishCapture() {
   if (!captureState?.canvas) throw new Error("撮影画像がありません。");
   const { canvas, meta, options, scale } = captureState;
-  const split = options.splitOutput === true && ["full", "scroll-area"].includes(meta.mode) && options.format !== "md" && options.destination !== "copy";
+  const split = options.splitOutput === true && ["full", "scroll-area"].includes(meta.mode) && options.destination !== "copy";
   const viewportHeight = meta.mode === "scroll-area" ? meta.scrollArea.clientHeight : meta.viewportHeight;
   const partHeight = split ? Math.max(1, Math.round(viewportHeight * scale)) : canvas.height;
   const partCount = split ? Math.ceil(canvas.height / partHeight) : 1;
   const needsCopy = options.destination === "copy" || options.destination === "both";
   const needsSave = options.destination !== "copy";
-  const needsFullPng = needsCopy || (needsSave && (options.format === "md" || (options.format === "png" && !split)));
+  const needsFullPng = needsCopy || (needsSave && (options.format === "png" && !split));
   const pngBlob = needsFullPng ? await canvasBlob(canvas, "image/png") : null;
-  const clipboard = !needsCopy ? null : options.format === "md"
-    ? { kind: "text", text: await makeClipboardMarkdown(meta, pngBlob) }
-    : options.format === "pdf" ? null : { kind: "image", dataUrl: await blobToDataUrl(pngBlob) };
+  const clipboard = !needsCopy || options.format === "pdf" ? null : { kind: "image", dataUrl: await blobToDataUrl(pngBlob) };
   const files = [];
   const addFile = (suffix, blob) => files.push({ suffix, url: makeObjectUrl(blob) });
   try {
@@ -251,9 +249,6 @@ async function finishCapture() {
       }
     } else if (needsSave && options.format === "pdf") {
       addFile(".pdf", await makePdf(canvas, partHeight));
-    } else if (needsSave && options.format === "md") {
-      addFile(".md", new Blob([makeMarkdown(meta, options)], { type: "text/markdown;charset=utf-8" }));
-      addFile(".png", pngBlob);
     }
   } catch (error) {
     for (const file of files) {
@@ -276,52 +271,8 @@ function sliceCanvas(canvas, top, height) {
   return part;
 }
 
-function makeMarkdown(meta, options) {
-  const title = cleanMarkdown(meta.title || kiriT("スクリーンショット"));
-  const timestamp = new Date().toLocaleString(chrome.i18n.getUILanguage());
-  const imageName = `./${encodeURIComponent(options.fileStem + ".png").replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)}`;
-  return [
-    `# ${title}`,
-    "",
-    `- URL: ${meta.url || ""}`,
-    `- ${kiriT("撮影日時")}: ${timestamp}`,
-    `- ${kiriT("撮影範囲")}: ${modeLabel(meta.mode)}`,
-    `- ${kiriT("出力")}: ${options.format.toUpperCase()}`,
-    "",
-    `![${title}](${imageName})`,
-    ""
-  ].join("\n");
-}
-
-async function makeClipboardMarkdown(meta, pngBlob) {
-  const pngDataUrl = await blobToDataUrl(pngBlob);
-  const title = cleanMarkdown(meta.title || kiriT("スクリーンショット"));
-  return [
-    `# ${title}`,
-    "",
-    `- URL: ${meta.url || ""}`,
-    `- ${kiriT("撮影日時")}: ${new Date().toLocaleString(chrome.i18n.getUILanguage())}`,
-    `- ${kiriT("撮影範囲")}: ${modeLabel(meta.mode)}`,
-    "",
-    `![${title}](${pngDataUrl})`,
-    ""
-  ].join("\n");
-}
-
-function modeLabel(mode) {
-  return kiriT(({ viewport: "表示中の範囲", region: "選択範囲", full: "ページ全体", "scroll-area": "スクロール領域" })[mode] || mode);
-}
-
-function cleanMarkdown(value) {
-  return String(value).replace(/[\r\n]+/g, " ").replace(/[\[\]]/g, "\\$&").trim();
-}
-
 async function copyToClipboard(clipboard) {
   if (!clipboard) throw new Error("この形式はクリップボードにコピーできません。");
-  if (clipboard.kind === "text") {
-    await navigator.clipboard.writeText(clipboard.text);
-    return;
-  }
   const response = await fetch(clipboard.dataUrl);
   const blob = await response.blob();
   await navigator.clipboard.write([

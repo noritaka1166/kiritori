@@ -986,7 +986,8 @@ async function initialize() {
     draftSourceUrl = URL.createObjectURL(draftData.source); sourceImage = new Image(); sourceImage.src = draftSourceUrl; await sourceImage.decode();
     history = draftData.history; redoStack = draftData.redoStack || []; render();
     exportButton.textContent = ({ save: kiriT("保存"), copy: kiriT("コピー"), both: kiriT("保存してコピー") })[draftData.options.destination] || kiriT("出力");
-    exportButton.disabled = false; cancelButton.textContent = kiriT("閉じる"); selectTool("crop"); return;
+    exportButton.disabled = false; cancelButton.textContent = kiriT("閉じる"); selectTool("crop");
+    return;
   }
   port = chrome.runtime.connect({ name: "kiritori-editor" });
   port.onDisconnect.addListener(() => {
