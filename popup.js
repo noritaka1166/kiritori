@@ -3,8 +3,15 @@ const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
 const destination = document.querySelector("#destination");
 const filenamePattern = document.querySelector("#filename-pattern");
+const scrollSpeed = document.querySelector("#scroll-speed");
+const scrollSpeedSetting = document.querySelector("#scroll-speed-setting");
+const scrollWaitCustom = document.querySelector("#scroll-wait-custom");
+const scrollWaitInput = document.querySelector("#scroll-wait-ms");
+const maxFramesInput = document.querySelector("#max-frames");
+const frameLimitSetting = document.querySelector("#frame-limit-setting");
 const splitOutput = document.querySelector("#split-output");
 const splitSetting = document.querySelector("#split-setting");
+const scrollAreaNote = document.querySelector("#scroll-area-note");
 const folder = document.querySelector("#folder");
 const removeAds = document.querySelector("#remove-ads");
 const manualHide = document.querySelector("#manual-hide");
@@ -27,6 +34,9 @@ const defaults = {
   destination: "save",
   filenamePattern: "title-date",
   splitOutput: false,
+  maxFrames: 80,
+  scrollSpeed: "normal",
+  scrollWaitMs: 600,
   folder: "Screenshots",
   removeAds: false,
   manualHide: false,
@@ -51,7 +61,7 @@ async function refreshFailures() {
     const failures = Array.isArray(response.failures) ? response.failures.slice(0, 10) : [];
     failureHistory.hidden = failures.length === 0;
     failureStatus.textContent = "";
-    const modes = { viewport: kiriT("表示中の範囲"), region: kiriT("選択範囲"), full: kiriT("ページ全体") };
+    const modes = { viewport: kiriT("表示中の範囲"), region: kiriT("選択範囲"), full: kiriT("ページ全体"), "scroll-area": kiriT("スクロール領域") };
     const phases = { preparing: kiriT("準備中"), selecting: kiriT("要素選択中"), capturing: kiriT("撮影中"), processing: kiriT("画像処理中"), editing: kiriT("編集中"), saving: kiriT("出力中") };
     for (const failure of failures) {
       const item = document.createElement("li");
@@ -99,13 +109,13 @@ function renderCaptureStatus(captureStatus) {
   if (captureStatus?.revision && captureStatus.revision < latestRevision) return;
   if (captureStatus?.revision) latestRevision = captureStatus.revision;
   captureBusy = Boolean(captureStatus?.active);
-  const showProgress = captureBusy && (captureStatus.mode === "full" || captureStatus.phase === "editing" || captureStatus.phase === "selecting");
+  const showProgress = captureBusy && (["full", "scroll-area"].includes(captureStatus.mode) || captureStatus.phase === "editing" || captureStatus.phase === "selecting");
   progressPanel.hidden = !showProgress;
   if (showProgress) {
     if (captureStatus.cancelRequested || captureStatus.phase === "cancelling") {
       progressText.textContent = kiriT("撮影をキャンセルしています…");
     } else if (captureStatus.phase === "selecting") {
-      progressText.textContent = kiriT("ページ上で隠す要素を選び、「選択完了」を押してください。");
+      progressText.textContent = captureStatus.selectionKind === "scroll-area" ? kiriT("ページ内の表など、縦にスクロールする領域を選んでください。") : kiriT("ページ上で隠す要素を選び、「選択完了」を押してください。");
     } else if (captureStatus.phase === "editing") {
       progressText.textContent = kiriT("プレビュー画面で画像を確認・編集してください。");
     } else if (captureStatus.phase === "processing") {
@@ -176,6 +186,9 @@ function currentSettings() {
     destination: destination.value,
     filenamePattern: filenamePattern.value,
     splitOutput: splitOutput.checked,
+    maxFrames: Math.min(200, Math.max(1, Math.floor(Number(maxFramesInput.value) || 80))),
+    scrollSpeed: scrollSpeed.value,
+    scrollWaitMs: Math.min(10000, Math.max(0, Number.isFinite(Number(scrollWaitInput.value)) && scrollWaitInput.value !== "" ? Math.floor(Number(scrollWaitInput.value)) : 600)),
     folder: folder.value,
     removeAds: removeAds.checked,
     manualHide: manualHide.checked,
@@ -195,11 +208,14 @@ async function loadSettings() {
   const { captureSettings } = await chrome.storage.local.get("captureSettings");
   if (captureSettings) {
     const settings = { ...defaults, ...captureSettings };
-    if (["viewport", "region", "full"].includes(settings.mode)) mode.value = settings.mode;
+    if (["viewport", "region", "full", "scroll-area"].includes(settings.mode)) mode.value = settings.mode;
     if (["png", "jpeg", "pdf", "md"].includes(settings.format)) format.value = settings.format;
     if (["save", "copy", "both"].includes(settings.destination)) destination.value = settings.destination;
     if (["title-date", "date-site-title", "site-date-title"].includes(settings.filenamePattern)) filenamePattern.value = settings.filenamePattern;
     splitOutput.checked = settings.splitOutput === true;
+    maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(settings.maxFrames) || 80)));
+    if (["fast", "normal", "slow", "custom"].includes(settings.scrollSpeed)) scrollSpeed.value = settings.scrollSpeed;
+    scrollWaitInput.value = Math.min(10000, Math.max(0, Number.isFinite(Number(settings.scrollWaitMs)) ? Math.floor(Number(settings.scrollWaitMs)) : 600));
     folder.value = settings.folder || defaults.folder;
     removeAds.checked = settings.removeAds === true;
     manualHide.checked = settings.manualHide === true;
@@ -215,6 +231,10 @@ async function loadSettings() {
 
 function updateControls() {
   const isPdf = format.value === "pdf";
+  scrollAreaNote.hidden = mode.value !== "scroll-area";
+  frameLimitSetting.hidden = !["full", "scroll-area"].includes(mode.value);
+  scrollSpeedSetting.hidden = !["full", "scroll-area"].includes(mode.value);
+  scrollWaitCustom.hidden = scrollSpeed.value !== "custom";
   for (const option of destination.options) {
     if (option.value === "copy" || option.value === "both") {
       option.disabled = isPdf;
@@ -222,7 +242,7 @@ function updateControls() {
   }
   if (isPdf && destination.value !== "save") destination.value = "save";
   folderRow.hidden = destination.value === "copy";
-  splitSetting.hidden = mode.value !== "full" || format.value === "md" || destination.value === "copy";
+  splitSetting.hidden = !["full", "scroll-area"].includes(mode.value) || format.value === "md" || destination.value === "copy";
 }
 
 mode.addEventListener("change", () => { updateControls(); saveSettings(); });
@@ -230,6 +250,9 @@ format.addEventListener("change", () => { updateControls(); saveSettings(); });
 destination.addEventListener("change", () => { updateControls(); saveSettings(); });
 filenamePattern.addEventListener("change", saveSettings);
 splitOutput.addEventListener("change", saveSettings);
+scrollSpeed.addEventListener("change", () => { updateControls(); saveSettings(); });
+scrollWaitInput.addEventListener("change", () => { const value = scrollWaitInput.value === "" ? 600 : Number(scrollWaitInput.value); scrollWaitInput.value = Math.min(10000, Math.max(0, Number.isFinite(value) ? Math.floor(value) : 600)); saveSettings(); });
+maxFramesInput.addEventListener("change", () => { maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(maxFramesInput.value) || 80))); saveSettings(); });
 folder.addEventListener("change", saveSettings);
 removeAds.addEventListener("change", saveSettings);
 manualHide.addEventListener("change", saveSettings);
@@ -247,7 +270,7 @@ captureButton.addEventListener("click", async () => {
   startPending = true;
   captureBusy = true;
   updateCaptureButton();
-  status.textContent = mode.value === "full" ? kiriT("ページをスクロールしながら撮影しています…") : kiriT("撮影しています…");
+  status.textContent = ["full", "scroll-area"].includes(mode.value) ? kiriT("ページをスクロールしながら撮影しています…") : kiriT("撮影しています…");
 
   try {
     await settingsReady;

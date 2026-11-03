@@ -688,5 +688,107 @@
   },
   "m_306d47982924f5a3": {
     "message": "Select text or shapes to move and adjust them. Drag the white handle to resize, or the ends of a line to adjust it."
+  },
+  "m_a445c1ef72eb3c65": {
+    "message": "Select scrollable area"
+  },
+  "m_e2e9eab35aeb41b2": {
+    "message": "Capture scrollable area"
+  },
+  "m_9b06de9fe7847b9f": {
+    "message": "Choose a vertically scrollable area in the page, such as a table."
+  },
+  "m_b5a84a6d8da58afc": {
+    "message": "Hover and click to select a scrollable area. Press ↑ to select its parent area."
+  },
+  "m_a0c450d12d698058": {
+    "message": "Capture this area"
+  },
+  "m_a8f8d449fbe324de": {
+    "message": "Choose an area that scrolls vertically."
+  },
+  "m_4b07d77653a917ab": {
+    "message": "Selecting scrollable area"
+  },
+  "m_3b8f8ecd6ef4c876": {
+    "message": "Scrollable area"
+  },
+  "m_5e68f5712251fa6f": {
+    "message": "Capture a vertically scrolling area, such as a table. Make sure the entire area is visible when selecting it. Horizontally hidden content is not included."
+  },
+  "m_04a0580387ef8e48": {
+    "message": "Split full pages or scrollable areas by viewport height"
+  },
+  "m_f05c73921b1009aa": {
+    "message": "The scrollable area is too long to capture at once (maximum 80 screens)."
+  },
+  "m_fe8a30fba65583d5": {
+    "message": "Make the entire scrollable area visible on screen before capturing."
+  },
+  "m_79e153854c6a713a": {
+    "message": "Could not scroll the selected area vertically."
+  },
+  "m_313b44ca8fd6ef97": {
+    "message": "The scrollable area could not be found. Please select it again."
+  },
+  "m_cfb0c7afae9b1120": {
+    "message": "The scrollable area is too long to capture at once."
+  },
+  "m_e59f9d86d54efda9": {
+    "message": "Reduce the capture area or capture smaller parts using full-page or visible-area mode."
+  },
+  "m_97cf9e55104e68b5": {
+    "message": "The selected scrollable area does not fit on screen."
+  },
+  "m_e0d5802ceb107e8f": {
+    "message": "Scroll the page until the entire area is visible, then select it again."
+  },
+  "m_979c58044efff9de": {
+    "message": "Could not scroll the selected area vertically."
+  },
+  "m_5439d94fdd27d25e": {
+    "message": "Select a table or area that scrolls vertically."
+  },
+  "m_4a57aaaa608bb8d0": {
+    "message": "The scrollable area disappeared during capture."
+  },
+  "m_24443dd6abc8d229": {
+    "message": "Keep the page open and try capturing again."
+  },
+  "m_d425e8cce7d48958": {
+    "message": "Scroll capture limit (screens)"
+  },
+  "m_7e2295d542acc24e": {
+    "message": "When the limit is reached, the captured portion is output. Image size limits also apply."
+  },
+  "m_ab12ade04db152ad": {
+    "message": "Captured up to the limit of $1 screens. The remainder is not included."
+  },
+  "m_befa31da4f4bbc6f": {
+    "message": "Capture smaller portions using visible or selected area. The image limit is 80 million pixels."
+  },
+  "m_deb23fe04b71e169": {
+    "message": "Wait after scrolling"
+  },
+  "m_f5bfe805f340a5a3": {
+    "message": "Fast (200 ms)"
+  },
+  "m_443066c4886629cd": {
+    "message": "Normal (600 ms)"
+  },
+  "m_ce226f3e9f351a44": {
+    "message": "Slow (1500 ms)"
+  },
+  "m_517f5a984feaaf2e": {
+    "message": "Custom"
+  },
+  "m_0aeda717ba0dd3a8": {
+    "message": "Custom wait (milliseconds)"
+  },
+  "m_5d6a9f7bf0ed10ab": {
+    "message": "Additional wait after scrolling and before capture. Chrome limits may lengthen the interval."
+  },
+  "m_1a8773fcf59d8ff6": {
+    "message": "Mosaic block size (px)"
   }
 }

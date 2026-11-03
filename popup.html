@@ -33,7 +33,9 @@
         <option value="viewport">表示中の範囲</option>
         <option value="region">範囲を選択</option>
         <option value="full">ページ全体をスクロール</option>
+        <option value="scroll-area">スクロール領域を選択</option>
       </select>
+      <p id="scroll-area-note" class="note" hidden>縦スクロールする表などの領域を撮影します。領域全体を画面内に表示して選んでください。横に隠れている部分は含みません。</p>
 
       <label for="output-format">出力形式</label>
       <select id="output-format">
@@ -58,10 +60,31 @@
       </select>
       <p class="note">日時は撮影時のローカル時刻、サイト名はドメイン名です。</p>
 
+      <section id="scroll-speed-setting" class="capture-setting" hidden>
+        <label for="scroll-speed">スクロール後の待ち時間</label>
+        <select id="scroll-speed">
+          <option value="fast">速い（200ms）</option>
+          <option value="normal" selected>標準（600ms）</option>
+          <option value="slow">ゆっくり（1500ms）</option>
+          <option value="custom">カスタム</option>
+        </select>
+        <div id="scroll-wait-custom" hidden>
+          <label for="scroll-wait-ms">カスタム待ち時間（ミリ秒）</label>
+          <input id="scroll-wait-ms" type="number" min="0" max="10000" step="100" value="600">
+        </div>
+        <p class="note">スクロール後、撮影前に追加で待つ時間です。Chromeの制限により撮影間隔が長くなる場合があります。</p>
+      </section>
+
+      <section id="frame-limit-setting" class="capture-setting" hidden>
+        <label for="max-frames">スクロール撮影の上限（画面数）</label>
+        <input id="max-frames" type="number" min="1" max="200" step="1" value="80">
+        <p class="note">上限に達すると、そこまで撮影した画像を出力します。画像サイズの制限も適用されます。</p>
+      </section>
+
       <section id="split-setting" class="capture-setting" aria-label="長いページの分割出力">
         <label class="toggle" for="split-output">
           <input id="split-output" type="checkbox">
-          <span>ページ全体を画面の高さごとに分割して保存</span>
+          <span>ページ全体またはスクロール領域を画面の高さごとに分割して保存</span>
         </label>
         <p class="note">PNG・JPEGは連番画像、PDFは複数ページ。コピー時は画像全体です。</p>
         <p class="note">Markdownとコピーのみの出力には適用されません。</p>

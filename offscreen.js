@@ -21,10 +21,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "add-frame") {
-    addFrame(message.image, message.scrollY, message.pageHeight, message.currentPageHeight)
+    addFrame(message.image, message.scrollY, message.pageHeight, message.currentPageHeight, message.crop)
       .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
+  }
+
+  if (message.type === "trim-to-captured") {
+    try {
+      if (!captureState?.canvas || !captureState.coveredBottom) throw new Error("撮影画像がありません。");
+      const old = captureState.canvas;
+      const height = Math.min(old.height, Math.max(1, Math.ceil(captureState.coveredBottom * captureState.scale)));
+      const canvas = document.createElement("canvas");
+      canvas.width = old.width; canvas.height = height;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("画像処理用Canvasを作成できませんでした。");
+      context.drawImage(old, 0, 0);
+      captureState.canvas = canvas; captureState.context = context;
+      sendResponse({ ok: true });
+    } catch (error) { sendResponse({ ok: false, error: error.message }); }
+    return false;
   }
 
   if (message.type === "preview") {
@@ -89,7 +105,7 @@ async function replaceImage(url) {
   }
 }
 
-async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight) {
+async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight, crop) {
   if (!captureState) throw new Error("画像処理の準備ができていません。");
   const response = await fetch(dataUrl);
   const bitmap = await createImageBitmap(await response.blob());
@@ -98,6 +114,9 @@ async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight) {
   if (meta.mode === "full") {
     const measuredPageHeight = Number.isFinite(currentPageHeight) ? currentPageHeight : framePageHeight;
     meta.pageHeight = Math.max(meta.pageHeight, measuredPageHeight);
+  } else if (meta.mode === "scroll-area") {
+    const measuredScrollHeight = Number.isFinite(currentPageHeight) ? currentPageHeight : framePageHeight;
+    meta.scrollArea.scrollHeight = Math.max(meta.scrollArea.scrollHeight, measuredScrollHeight);
   }
 
   if (!captureState.canvas) {
@@ -105,6 +124,12 @@ async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight) {
     if (meta.mode === "full") {
       const width = bitmap.width;
       const height = getSafeFullPageHeight(width, meta.pageHeight * captureState.scale);
+      captureState.canvas = document.createElement("canvas");
+      captureState.canvas.width = width;
+      captureState.canvas.height = height;
+    } else if (meta.mode === "scroll-area") {
+      const width = Math.max(1, Math.round(meta.scrollArea.clientWidth * captureState.scale));
+      const height = getSafeFullPageHeight(width, meta.scrollArea.scrollHeight * captureState.scale);
       captureState.canvas = document.createElement("canvas");
       captureState.canvas.width = width;
       captureState.canvas.height = height;
@@ -125,8 +150,10 @@ async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight) {
     }
   }
 
-  if (meta.mode === "full") {
-    const requiredHeight = Math.max(meta.pageHeight, scrollY + bitmap.height / captureState.scale) * captureState.scale;
+  if (meta.mode === "full" || meta.mode === "scroll-area") {
+    const contentHeight = meta.mode === "full" ? meta.pageHeight : meta.scrollArea.scrollHeight;
+    const viewportHeight = meta.mode === "full" ? bitmap.height / captureState.scale : meta.scrollArea.clientHeight;
+    const requiredHeight = Math.max(contentHeight, scrollY + viewportHeight) * captureState.scale;
     expandFullPageCanvas(getSafeFullPageHeight(captureState.canvas.width, requiredHeight));
   }
 
@@ -140,6 +167,21 @@ async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight) {
     const drawHeight = Math.max(0, (bottom - drawTop) * scale);
     if (drawHeight > 0) {
       context.drawImage(bitmap, 0, sourceTop, bitmap.width, drawHeight, 0, drawTop * scale, bitmap.width, drawHeight);
+      captureState.coveredBottom = Math.max(captureState.coveredBottom, bottom);
+    }
+  } else if (meta.mode === "scroll-area") {
+    const area = meta.scrollArea;
+    const frameCrop = crop || area.rect;
+    const scale = captureState.scale;
+    const sx = Math.round(frameCrop.x * scale);
+    const sy = Math.round(frameCrop.y * scale);
+    const sw = Math.min(bitmap.width - sx, Math.round(frameCrop.width * scale));
+    const drawTop = Math.max(captureState.coveredBottom, scrollY);
+    const sourceTop = Math.max(0, (drawTop - scrollY) * scale);
+    const bottom = Math.min(framePageHeight, scrollY + area.clientHeight);
+    const drawHeight = Math.max(0, (bottom - drawTop) * scale);
+    if (sw > 0 && drawHeight > 0) {
+      context.drawImage(bitmap, sx, sy + sourceTop, sw, drawHeight, 0, drawTop * scale, captureState.canvas.width, drawHeight);
       captureState.coveredBottom = Math.max(captureState.coveredBottom, bottom);
     }
   } else if (meta.mode === "region") {
@@ -180,8 +222,9 @@ function expandFullPageCanvas(requiredHeight) {
 async function finishCapture() {
   if (!captureState?.canvas) throw new Error("撮影画像がありません。");
   const { canvas, meta, options, scale } = captureState;
-  const split = options.splitOutput === true && meta.mode === "full" && options.format !== "md" && options.destination !== "copy";
-  const partHeight = split ? Math.max(1, Math.round(meta.viewportHeight * scale)) : canvas.height;
+  const split = options.splitOutput === true && ["full", "scroll-area"].includes(meta.mode) && options.format !== "md" && options.destination !== "copy";
+  const viewportHeight = meta.mode === "scroll-area" ? meta.scrollArea.clientHeight : meta.viewportHeight;
+  const partHeight = split ? Math.max(1, Math.round(viewportHeight * scale)) : canvas.height;
   const partCount = split ? Math.ceil(canvas.height / partHeight) : 1;
   const needsCopy = options.destination === "copy" || options.destination === "both";
   const needsSave = options.destination !== "copy";
@@ -266,7 +309,7 @@ async function makeClipboardMarkdown(meta, pngBlob) {
 }
 
 function modeLabel(mode) {
-  return kiriT(({ viewport: "表示中の範囲", region: "選択範囲", full: "ページ全体" })[mode] || mode);
+  return kiriT(({ viewport: "表示中の範囲", region: "選択範囲", full: "ページ全体", "scroll-area": "スクロール領域" })[mode] || mode);
 }
 
 function cleanMarkdown(value) {

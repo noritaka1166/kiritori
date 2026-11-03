@@ -15,6 +15,8 @@ const savedColorsElement = document.querySelector("#saved-colors");
 const saveColorButton = document.querySelector("#save-color");
 const paletteStatus = document.querySelector("#palette-status");
 const sizeInput = document.querySelector("#size");
+const mosaicBlockInput = document.querySelector("#mosaic-block");
+const mosaicBlockLabel = document.querySelector("#mosaic-block-label");
 const inlineText = document.querySelector("#inline-text");
 const undoButton = document.querySelector("#undo");
 const redoButton = document.querySelector("#redo");
@@ -194,6 +196,7 @@ function selectTool(next) {
   drag = null;
   clearOverlay();
   tool = next;
+  mosaicBlockLabel.hidden = tool !== "mosaic";
   if (next !== "select") selectedIndex = null;
   for (const button of toolButtons) button.setAttribute("aria-pressed", String(button.dataset.tool === tool));
   hint.textContent = labels[tool];
@@ -485,7 +488,7 @@ function drawMosaic(item, crop) {
   const width = right - left, height = bottom - top;
   if (width <= 0 || height <= 0) return;
   const small = document.createElement("canvas");
-  const block = Math.max(16, item.size);
+  const block = Math.max(2, Math.min(160, Number(item.blockSize ?? item.size) || 12));
   small.width = Math.max(1, Math.ceil(width / block));
   small.height = Math.max(1, Math.ceil(height / block));
   const smallContext = small.getContext("2d");
@@ -697,7 +700,9 @@ canvas.addEventListener("pointerup", (event) => {
   if (tool === "crop" && rect.width >= 4 && rect.height >= 4) {
     next.crop = rect;
   } else if (tool === "mosaic" && rect.width >= 4 && rect.height >= 4) {
-    next.operations.push({ type: "mosaic", ...rect, size: size() });
+    const blockSize = Math.max(2, Math.min(160, Math.floor(Number(mosaicBlockInput.value) || 12)));
+    mosaicBlockInput.value = blockSize;
+    next.operations.push({ type: "mosaic", ...rect, blockSize });
   } else if ((tool === "redact" || tool === "marker") && rect.width >= 4 && rect.height >= 4) {
     const area = tool === "redact" ? coveringRectangle(start, end) : rect;
     next.operations.push({ type: tool, ...area, color: colorInput.value });
@@ -816,7 +821,7 @@ objectDelete.addEventListener("click", () => {
 
 function setEditingDisabled(disabled) {
   paletteDisabled = disabled;
-  for (const element of [...toolButtons, colorInput, sizeInput, inlineText, objectSize, objectAngle, objectLength, objectText, objectDeselect, objectDelete, undoButton, redoButton, resetButton, exportButton]) element.disabled = disabled;
+  for (const element of [...toolButtons, colorInput, sizeInput, mosaicBlockInput, inlineText, objectSize, objectAngle, objectLength, objectText, objectDeselect, objectDelete, undoButton, redoButton, resetButton, exportButton]) element.disabled = disabled;
   renderPalette();
   if (!disabled) updateButtons();
 }

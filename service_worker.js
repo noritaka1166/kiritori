@@ -136,6 +136,12 @@ function registerContextMenus() {
       title: kiriT("ページ全体を撮影"),
       contexts: ["all"]
     });
+    chrome.contextMenus.create({
+      id: "local-capture-scroll-area",
+      parentId: "local-capture-root",
+      title: kiriT("スクロール領域を撮影"),
+      contexts: ["all"]
+    });
   });
 }
 chrome.runtime.onInstalled.addListener(registerContextMenus);
@@ -145,7 +151,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const modeByMenuId = {
     "local-capture-viewport": "viewport",
     "local-capture-region": "region",
-    "local-capture-full": "full"
+    "local-capture-full": "full",
+    "local-capture-scroll-area": "scroll-area"
   };
   const mode = modeByMenuId[info.menuItemId];
   if (!mode || !tab?.id) return;
@@ -166,6 +173,7 @@ function captureStatus(job) {
     mode: job.mode,
     phase: job.phase,
     currentFrame: job.currentFrame,
+    selectionKind: job.selectionKind || null,
     cancellable: job.cancellable,
     cancelRequested: job.cancelRequested,
     message: job.message || "",
@@ -179,11 +187,11 @@ function reportCapture(job, changes = {}) {
   job.revision = ++captureRevision;
   const status = captureStatus(job);
   lastCaptureStatus = status;
-  if (job.mode === "full" && job.tabId) {
+  if (["full", "scroll-area"].includes(job.mode) && job.tabId) {
     const text = job.active ? (job.currentFrame ? String(job.currentFrame) : "…") : "";
     chrome.action.setBadgeText({ text, tabId: job.tabId }).catch(() => undefined);
     chrome.action.setBadgeBackgroundColor({ color: "#1a73e8", tabId: job.tabId }).catch(() => undefined);
-    const description = job.cancelRequested ? kiriT("撮影をキャンセル中") : job.phase === "selecting" ? kiriT("隠す要素を選択中") : job.phase === "editing" ? kiriT("プレビューで編集中") : job.phase === "processing" ? kiriT("画像をまとめています") : job.phase === "saving" ? kiriT("画像を出力中") : job.currentFrame ? kiriT("$1画面目を撮影中", job.currentFrame) : kiriT("撮影を準備中");
+    const description = job.cancelRequested ? kiriT("撮影をキャンセル中") : job.phase === "selecting" ? (job.mode === "scroll-area" && job.selectionKind === "scroll-area" ? kiriT("スクロール領域を選択中") : kiriT("隠す要素を選択中")) : job.phase === "editing" ? kiriT("プレビューで編集中") : job.phase === "processing" ? kiriT("画像をまとめています") : job.phase === "saving" ? kiriT("画像を出力中") : job.currentFrame ? kiriT("$1画面目を撮影中", job.currentFrame) : kiriT("撮影を準備中");
     const title = job.active ? `KiriTori: ${description}` : "KiriTori";
     chrome.action.setTitle({ title, tabId: job.tabId }).catch(() => undefined);
   }
@@ -207,7 +215,7 @@ async function startCapture(options, targetTab) {
   const job = {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
     active: true, mode: options?.mode, phase: "preparing", currentFrame: 0,
-    cancellable: options?.mode === "full", cancelRequested: false,
+    cancellable: ["full", "scroll-area"].includes(options?.mode), cancelRequested: false,
     tabId: targetTab?.id, offscreenStarted: false, revision: 0
   };
   activeCapture = job;
@@ -233,7 +241,7 @@ async function startCapture(options, targetTab) {
 }
 
 async function handleCapture(options, targetTab, job) {
-  if (!options || !["viewport", "region", "full"].includes(options.mode)) {
+  if (!options || !["viewport", "region", "full", "scroll-area"].includes(options.mode)) {
     throw new Error("撮影範囲を選び直してください。");
   }
   if (!["png", "jpeg", "pdf", "md"].includes(options.format)) {
@@ -259,10 +267,19 @@ async function handleCapture(options, targetTab, job) {
 
   await ensureOffscreenDocument();
   throwIfCancelled(job);
+  await executeInTab(tab.id, restoreStaleScrollAreaState);
+  throwIfCancelled(job);
   let meta;
   let adFilterApplied = false;
   let backToTopFilterRequested = false;
   let manualHideRequested = false;
+  let scrollAreaSelected = false;
+  let reachedLimit = false;
+  const maxFrames = Math.min(200, Math.max(1, Math.floor(Number(options.maxFrames) || 80)));
+  const scrollWaitPresets = { fast: 200, normal: 600, slow: 1500 };
+  const customWait = options.scrollWaitMs === null || options.scrollWaitMs === "" ? NaN : Number(options.scrollWaitMs);
+  const scrollWaitMs = options.scrollSpeed === "custom" && Number.isFinite(customWait) ? Math.min(10000, Math.max(0, Math.floor(customWait))) : (scrollWaitPresets[options.scrollSpeed] ?? 600);
+  let lastFrameCapturedAt = 0;
 
   try {
     backToTopFilterRequested = true;
@@ -283,7 +300,7 @@ async function handleCapture(options, targetTab, job) {
       }]);
       if (selection?.cancelled) job.cancelRequested = true;
       throwIfCancelled(job);
-      reportCapture(job, { phase: "preparing", cancellable: options.mode === "full" });
+      reportCapture(job, { phase: "preparing", cancellable: ["full", "scroll-area"].includes(options.mode) });
     }
 
     if (options.mode === "full") {
@@ -298,7 +315,7 @@ async function handleCapture(options, targetTab, job) {
         let targetY = 0;
         let previousY = -1;
         let completed = false;
-        for (let index = 0; index < 80; index += 1) {
+        for (let index = 0; index < maxFrames; index += 1) {
           throwIfCancelled(job);
           reportCapture(job, { phase: "capturing", currentFrame: index + 1 });
           await assertTabStillActive(tab.id, tab.windowId);
@@ -309,10 +326,11 @@ async function handleCapture(options, targetTab, job) {
             throw new Error("ページを縦にスクロールできませんでした。表示範囲か選択範囲で撮影してください。");
           }
           previousY = actualY;
-          if (index > 0) await delay(600);
+          await delay(Math.max(scrollWaitMs, lastFrameCapturedAt ? 510 - (Date.now() - lastFrameCapturedAt) : 0, 0));
           throwIfCancelled(job);
           await assertTabStillActive(tab.id, tab.windowId);
           const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+          lastFrameCapturedAt = Date.now();
           await assertTabStillActive(tab.id, tab.windowId);
           throwIfCancelled(job);
           const pageMetrics = await executeInTab(tab.id, readFullPageMetrics);
@@ -342,10 +360,94 @@ async function handleCapture(options, targetTab, job) {
             throw new Error("ページのスクロール位置を更新できませんでした。表示範囲か選択範囲で撮影してください。");
           }
         }
-        if (!completed) throw new Error("ページが長すぎて一度に撮影できません（80画面まで）。");
+        if (!completed) { await offscreenMessage({ type: "trim-to-captured" }); reachedLimit = true; }
       } finally {
         await executeInTab(tab.id, restoreFullPage).catch(() => undefined);
       }
+    } else if (options.mode === "scroll-area") {
+      const page = await executeInTab(tab.id, readPageInfo);
+      reportCapture(job, { phase: "selecting", selectionKind: "scroll-area", cancellable: true });
+      throwIfCancelled(job);
+      const selected = await executeInTab(tab.id, selectScrollableArea, [job.id, {
+        label: kiriT("スクロール領域を選択"),
+        instruction: kiriT("カーソルを合わせてクリックし、スクロール領域を選びます。↑キーで親の領域を選べます。"),
+        choose: kiriT("この領域を撮影"),
+        cancel: kiriT("キャンセル"),
+        empty: kiriT("縦スクロールできる領域を選んでください。")
+      }]);
+      if (!selected) {
+        const error = new Error("スクロール領域の選択をキャンセルしました。");
+        error.name = "CaptureCancelled";
+        throw error;
+      }
+      scrollAreaSelected = true;
+      reportCapture(job, { phase: "preparing", selectionKind: null, cancellable: true });
+      const area = await executeInTab(tab.id, readScrollableAreaMetrics, [job.id]);
+      if (!area) throw new Error("スクロール領域がページ内から見つかりません。もう一度選択してください。");
+      if (area.rect.x < 0 || area.rect.y < 0 || area.rect.x + area.rect.width > page.viewportWidth + 1 || area.rect.y + area.rect.height > page.viewportHeight + 1) {
+        throw new Error("スクロール領域全体が画面に表示されるようにしてから撮影してください。");
+      }
+      await executeInTab(tab.id, suppressScrollableAreaHover, [job.id]);
+      meta = { ...page, mode: "scroll-area", scrollArea: area };
+      options.fileStem = makeFileStem(meta, options.filenamePattern);
+      await offscreenMessage({ type: "begin", meta, options });
+      job.offscreenStarted = true;
+      throwIfCancelled(job);
+      let targetY = 0;
+      let previousY = -1;
+      let completed = false;
+      for (let index = 0; index < maxFrames; index += 1) {
+        throwIfCancelled(job);
+        reportCapture(job, { phase: "capturing", currentFrame: index + 1 });
+        await assertTabStillActive(tab.id, tab.windowId);
+        const frameInfo = await executeInTab(tab.id, scrollScrollableArea, [job.id, targetY]);
+        throwIfCancelled(job);
+        const actualY = frameInfo?.scrollTop;
+        if (!frameInfo || frameInfo.rect.x < 0 || frameInfo.rect.y < 0 || frameInfo.rect.x + frameInfo.rect.width > page.viewportWidth + 1 || frameInfo.rect.y + frameInfo.rect.height > page.viewportHeight + 1) {
+          throw new Error("スクロール領域全体が画面に表示されるようにしてから撮影してください。");
+        }
+        if (!Number.isFinite(actualY) || (index > 0 && actualY <= previousY + 1)) {
+          throw new Error("スクロール領域を縦にスクロールできませんでした。");
+        }
+        previousY = actualY;
+        await delay(Math.max(scrollWaitMs, lastFrameCapturedAt ? 510 - (Date.now() - lastFrameCapturedAt) : 0, 0));
+        throwIfCancelled(job);
+        await assertTabStillActive(tab.id, tab.windowId);
+        const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+        lastFrameCapturedAt = Date.now();
+        await assertTabStillActive(tab.id, tab.windowId);
+        throwIfCancelled(job);
+        const metrics = await executeInTab(tab.id, readScrollableAreaMetrics, [job.id]);
+        if (!metrics) throw new Error("スクロール領域がページ内から見つかりません。もう一度選択してください。");
+        await offscreenMessage({
+          type: "add-frame",
+          image,
+          scrollY: actualY,
+          pageHeight: frameInfo.scrollHeight,
+          currentPageHeight: metrics.scrollHeight,
+          crop: frameInfo.rect
+        });
+        if (index === 0) await executeInTab(tab.id, hideScrollableAreaSticky, [job.id]);
+        throwIfCancelled(job);
+
+        let latestMetrics = metrics;
+        let bottom = Math.max(0, latestMetrics.scrollHeight - latestMetrics.clientHeight);
+        if (actualY >= bottom - 1) {
+          latestMetrics = await executeInTab(tab.id, waitForScrollableAreaStable, [job.id]);
+          throwIfCancelled(job);
+          bottom = Math.max(0, latestMetrics.scrollHeight - latestMetrics.clientHeight);
+          if (actualY >= bottom - 1) {
+            completed = true;
+            break;
+          }
+        }
+
+        targetY = Math.min(actualY + latestMetrics.clientHeight, bottom);
+        if (targetY <= actualY + 1) {
+          throw new Error("スクロール領域を縦にスクロールできませんでした。");
+        }
+      }
+      if (!completed) { await offscreenMessage({ type: "trim-to-captured" }); reachedLimit = true; }
     } else {
       const page = await executeInTab(tab.id, readPageInfo);
       meta = { ...page, mode: options.mode };
@@ -368,6 +470,7 @@ async function handleCapture(options, targetTab, job) {
       await offscreenMessage({ type: "add-frame", image, scrollY: 0 });
     }
   } finally {
+    if (scrollAreaSelected) await executeInTab(tab.id, restoreScrollableArea, [job.id]).catch(() => undefined);
     if (manualHideRequested) await executeInTab(tab.id, restoreManualHiddenElements, [job.id]).catch(() => undefined);
     if (adFilterApplied) await executeInTab(tab.id, restoreAdFilter).catch(() => undefined);
     if (backToTopFilterRequested) await executeInTab(tab.id, restoreBackToTopButtons).catch(() => undefined);
@@ -420,7 +523,7 @@ async function handleCapture(options, targetTab, job) {
     await offscreenMessage({ type: "release", urls: artifact.files.map((file) => file.url) });
   }
 
-  return { message: successMessage(options, saved, copied) };
+  return { message: successMessage(options, saved, copied) + (reachedLimit ? " · " + kiriT("$1画面の上限まで撮影しました。続きは含まれていません。", maxFrames) : "") };
 }
 
 async function openCaptureEditor(job, options, previewUrl) {
@@ -689,6 +792,426 @@ async function selectElementsToHide(jobId, labels) {
 function cancelManualSelection(jobId) {
   window.__kiritoriManualCancelJob = jobId;
   if (window.__kiritoriManualHide?.jobId === jobId) window.__kiritoriManualHide.cancel();
+  if (window.__kiritoriScrollSelector?.jobId === jobId) window.__kiritoriScrollSelector.cancel();
+}
+
+async function restoreStaleScrollAreaState() {
+  if (window.__kiritoriScrollSelector?.cancel) {
+    window.__kiritoriScrollSelector.cancel();
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
+  const areaMarkerName = "data-kiritori-scroll-state";
+  for (const element of document.querySelectorAll(`[${areaMarkerName}]`)) {
+    let saved;
+    try { saved = JSON.parse(element.getAttribute(areaMarkerName) || "null"); } catch (_) { continue; }
+    if (saved?.owner !== "kiritori" || saved.version !== 1) continue;
+    element.scrollTop = saved.originalTop;
+    element.scrollLeft = saved.originalLeft;
+    if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+      if (saved.scrollBehavior) element.style.setProperty("scroll-behavior", saved.scrollBehavior, saved.scrollPriority);
+      else element.style.removeProperty("scroll-behavior");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
+    if (saved.previousMarker === null) element.removeAttribute(areaMarkerName);
+    else element.setAttribute(areaMarkerName, saved.previousMarker);
+  }
+  const stickyMarkerName = "data-kiritori-scroll-sticky";
+  for (const element of document.querySelectorAll(`[${stickyMarkerName}]`)) {
+    let saved;
+    try { saved = JSON.parse(element.getAttribute(stickyMarkerName) || "null"); } catch (_) { continue; }
+    if (saved?.owner !== "kiritori" || saved.version !== 1) continue;
+    if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
+      if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
+      else element.style.removeProperty("visibility");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
+    if (saved.previousMarker === null) element.removeAttribute(stickyMarkerName);
+    else element.setAttribute(stickyMarkerName, saved.previousMarker);
+  }
+  const interactionMarkerName = "data-kiritori-scroll-interaction";
+  for (const style of document.querySelectorAll(`style[${interactionMarkerName}]`)) {
+    let saved;
+    try { saved = JSON.parse(style.getAttribute(interactionMarkerName) || "null"); } catch (_) { continue; }
+    if (saved?.owner === "kiritori" && saved.version === 1) style.remove();
+  }
+  const staleCapture = window.__kiritoriScrollCapture;
+  if (staleCapture) {
+    const element = staleCapture.element;
+    if (element?.isConnected && !element.hasAttribute(areaMarkerName)) {
+      element.scrollTop = staleCapture.originalTop;
+      element.scrollLeft = staleCapture.originalLeft;
+      if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+        if (staleCapture.scrollBehavior) element.style.setProperty("scroll-behavior", staleCapture.scrollBehavior, staleCapture.scrollPriority);
+        else element.style.removeProperty("scroll-behavior");
+        if (!staleCapture.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+      }
+    }
+    delete window.__kiritoriScrollCapture;
+  }
+}
+
+function selectScrollableArea(jobId, labels) {
+  if (window.__kiritoriScrollSelector?.cancel) window.__kiritoriScrollSelector.cancel();
+  const markerName = "data-kiritori-scroll-state";
+  const stickyMarkerName = "data-kiritori-scroll-sticky";
+  for (const element of document.querySelectorAll(`[${stickyMarkerName}]`)) {
+    let saved;
+    try { saved = JSON.parse(element.getAttribute(stickyMarkerName) || "null"); } catch (_) { continue; }
+    if (saved?.owner !== "kiritori" || saved.version !== 1) continue;
+    if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
+      if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
+      else element.style.removeProperty("visibility");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
+    if (saved.previousMarker === null) element.removeAttribute(stickyMarkerName);
+    else element.setAttribute(stickyMarkerName, saved.previousMarker);
+  }
+  const restoreMarkedArea = (element) => {
+    let saved;
+    try { saved = JSON.parse(element.getAttribute(markerName) || "null"); } catch (_) { return false; }
+    if (saved?.owner !== "kiritori" || saved.version !== 1) return false;
+    element.scrollTop = saved.originalTop;
+    element.scrollLeft = saved.originalLeft;
+    if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+      if (saved.scrollBehavior) element.style.setProperty("scroll-behavior", saved.scrollBehavior, saved.scrollPriority);
+      else element.style.removeProperty("scroll-behavior");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
+    if (saved.previousMarker === null) element.removeAttribute(markerName);
+    else element.setAttribute(markerName, saved.previousMarker);
+    return true;
+  };
+  for (const element of document.querySelectorAll(`[${markerName}]`)) restoreMarkedArea(element);
+  const staleCapture = window.__kiritoriScrollCapture;
+  if (staleCapture) {
+    const element = staleCapture.element;
+    if (element?.isConnected && !restoreMarkedArea(element)) {
+      element.scrollTop = staleCapture.originalTop;
+      element.scrollLeft = staleCapture.originalLeft;
+      if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+        if (staleCapture.scrollBehavior) element.style.setProperty("scroll-behavior", staleCapture.scrollBehavior, staleCapture.scrollPriority);
+        else element.style.removeProperty("scroll-behavior");
+        if (!staleCapture.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+      }
+    }
+    delete window.__kiritoriScrollCapture;
+  }
+  return new Promise((resolve) => {
+    const host = document.createElement("div");
+    host.style.cssText = "all:initial!important;position:fixed!important;inset:0!important;z-index:2147483647!important;pointer-events:none!important;";
+    const shadow = host.attachShadow({ mode: "closed" });
+    const glass = document.createElement("div");
+    const highlight = document.createElement("div");
+    const bar = document.createElement("div");
+    const instruction = document.createElement("span");
+    const status = document.createElement("span");
+    const choose = document.createElement("button");
+    const cancel = document.createElement("button");
+    Object.assign(glass.style, { position: "fixed", inset: "0", cursor: "crosshair", pointerEvents: "auto", zIndex: "0" });
+    Object.assign(highlight.style, { boxSizing: "border-box", position: "fixed", pointerEvents: "none", zIndex: "1", border: "3px solid #1a73e8", background: "rgba(26,115,232,.14)", display: "none" });
+    Object.assign(bar.style, { boxSizing: "border-box", position: "fixed", top: "12px", left: "50%", transform: "translateX(-50%)", maxWidth: "calc(100vw - 24px)", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap", padding: "10px 12px", borderRadius: "10px", background: "#202124", color: "white", font: "13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif", boxShadow: "0 3px 14px #0005", pointerEvents: "auto", zIndex: "2" });
+    bar.setAttribute("role", "toolbar");
+    bar.setAttribute("aria-label", labels.label);
+    instruction.textContent = labels.instruction;
+    status.textContent = labels.empty;
+    for (const button of [choose, cancel]) {
+      button.type = "button";
+      Object.assign(button.style, { appearance: "none", border: "1px solid #9ca9bc", borderRadius: "6px", padding: "6px 10px", background: "white", color: "#202124", font: "inherit", cursor: "pointer" });
+    }
+    choose.textContent = labels.choose;
+    choose.disabled = true;
+    choose.style.opacity = ".5";
+    Object.assign(choose.style, { background: "#8ab4f8", borderColor: "#8ab4f8", color: "#102a50", fontWeight: "700" });
+    cancel.textContent = labels.cancel;
+    bar.append(instruction, status, choose, cancel);
+    shadow.append(glass, highlight, bar);
+
+    const state = { jobId, host, port: null, timer: null, settled: false, cancel: () => finish(null) };
+    let hovered = null;
+    let selected = null;
+    let parentHistory = [];
+    const resolveSelection = resolve;
+
+    function isScrollable(element) {
+      if (!(element instanceof HTMLElement) || element === document.body || element === document.documentElement) return false;
+      if (element.clientWidth < 40 || element.clientHeight < 40 || element.scrollHeight <= element.clientHeight + 2) return false;
+      const overflow = getComputedStyle(element).overflowY;
+      return overflow === "auto" || overflow === "scroll" || overflow === "overlay";
+    }
+
+    function nearestScrollable(element) {
+      let current = element instanceof Element ? element : null;
+      while (current && current !== document.body && current !== document.documentElement) {
+        if (isScrollable(current)) return current;
+        current = current.parentElement;
+      }
+      return null;
+    }
+
+    function elementAt(x, y) {
+      glass.style.pointerEvents = "none";
+      const element = document.elementFromPoint(x, y);
+      glass.style.pointerEvents = "auto";
+      return nearestScrollable(element);
+    }
+
+    function showHighlight(element) {
+      hovered = element;
+      if (!element?.isConnected) {
+        highlight.style.display = "none";
+        if (!selected) {
+          status.textContent = labels.empty;
+          choose.disabled = true;
+          choose.style.opacity = ".5";
+        }
+        return;
+      }
+      const rect = element.getBoundingClientRect();
+      const scaleX = element.offsetWidth ? rect.width / element.offsetWidth : 1;
+      const scaleY = element.offsetHeight ? rect.height / element.offsetHeight : 1;
+      const left = rect.left + element.clientLeft * scaleX;
+      const top = rect.top + element.clientTop * scaleY;
+      const width = element.clientWidth * scaleX;
+      const height = element.clientHeight * scaleY;
+      Object.assign(highlight.style, { display: "block", left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px` });
+      status.textContent = `${Math.round(element.clientWidth)} × ${Math.round(element.clientHeight)} px · ${Math.round(element.scrollHeight)} px`;
+      choose.disabled = false;
+      choose.style.opacity = "1";
+    }
+
+    async function finish(value) {
+      if (state.settled) return;
+      state.settled = true;
+      clearInterval(state.timer);
+      window.removeEventListener("keydown", onKey, true);
+      try { state.port?.disconnect(); } catch (_) {}
+      host.remove();
+      if (window.__kiritoriScrollSelector === state) delete window.__kiritoriScrollSelector;
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      resolveSelection(value);
+    }
+
+    function onKey(event) {
+      if (event.key === "Escape") {
+        event.preventDefault(); event.stopPropagation(); finish(null);
+      } else if (event.key === "ArrowUp") {
+        let parent = hovered?.parentElement;
+        while (parent && parent !== document.body && parent !== document.documentElement && !isScrollable(parent)) parent = parent.parentElement;
+        if (parent && parent !== document.body && parent !== document.documentElement) {
+          event.preventDefault(); event.stopPropagation(); parentHistory.push(hovered); showHighlight(parent);
+        }
+      } else if (event.key === "ArrowDown" && parentHistory.length) {
+        event.preventDefault(); event.stopPropagation(); showHighlight(parentHistory.pop());
+      } else if (["PageDown", "PageUp", "Home", "End", " "].includes(event.key)) {
+        event.preventDefault(); event.stopPropagation();
+      }
+    }
+
+    window.__kiritoriScrollSelector = state;
+    document.documentElement.appendChild(host);
+    glass.addEventListener("mousemove", (event) => {
+      parentHistory = [];
+      if (!selected) showHighlight(elementAt(event.clientX, event.clientY));
+    });
+    glass.addEventListener("click", (event) => {
+      event.preventDefault(); event.stopPropagation();
+      selected = hovered || elementAt(event.clientX, event.clientY);
+      showHighlight(selected);
+    });
+    glass.addEventListener("wheel", (event) => event.preventDefault(), { passive: false });
+    choose.addEventListener("click", async () => {
+      if (!selected?.isConnected || !isScrollable(selected)) {
+        selected = null;
+        showHighlight(null);
+        return;
+      }
+      const element = selected;
+      const scrollBehavior = element.style.getPropertyValue("scroll-behavior");
+      const scrollPriority = element.style.getPropertyPriority("scroll-behavior");
+      const hadStyle = element.hasAttribute("style");
+      const originalTop = element.scrollTop;
+      const originalLeft = element.scrollLeft;
+      const previousMarker = element.getAttribute(markerName);
+      element.setAttribute(markerName, JSON.stringify({
+        owner: "kiritori", version: 1, originalTop, originalLeft,
+        scrollBehavior, scrollPriority, hadStyle, previousMarker
+      }));
+      element.style.setProperty("scroll-behavior", "auto", "important");
+      const captureState = { jobId, element, originalTop, originalLeft, scrollBehavior, scrollPriority, hadStyle, markerName };
+      window.__kiritoriScrollCapture = captureState;
+      element.scrollTop = 0;
+      await finish(true);
+    });
+    cancel.addEventListener("click", () => finish(null));
+    window.addEventListener("keydown", onKey, true);
+    try {
+      state.port = chrome.runtime.connect({ name: "kiritori-selector" });
+      state.port.onDisconnect.addListener(() => { if (!state.settled) state.cancel(); });
+      state.port.postMessage({ type: "hello", jobId });
+      state.timer = setInterval(() => { try { state.port.postMessage({ type: "heartbeat" }); } catch (_) { state.cancel(); } }, 20_000);
+    } catch (_) { state.cancel(); }
+  });
+}
+
+function scrollScrollableArea(jobId, y) {
+  const state = window.__kiritoriScrollCapture;
+  if (!state || state.jobId !== jobId || !state.element?.isConnected) return null;
+  const element = state.element;
+  const bounds = element.getBoundingClientRect();
+  const scaleY = element.offsetHeight ? bounds.height / element.offsetHeight : 1;
+  element.scrollTop = y / (scaleY || 1);
+  const readMetrics = () => {
+    const rect = element.getBoundingClientRect();
+    const currentScaleX = element.offsetWidth ? rect.width / element.offsetWidth : 1;
+    const currentScaleY = element.offsetHeight ? rect.height / element.offsetHeight : 1;
+    return {
+      scrollTop: element.scrollTop * currentScaleY,
+      scrollHeight: element.scrollHeight * currentScaleY,
+      clientHeight: element.clientHeight * currentScaleY,
+      clientWidth: element.clientWidth * currentScaleX,
+      rect: {
+        x: rect.left + element.clientLeft * currentScaleX,
+        y: rect.top + element.clientTop * currentScaleY,
+        width: element.clientWidth * currentScaleX,
+        height: element.clientHeight * currentScaleY
+      }
+    };
+  };
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => resolve(readMetrics()), 160))));
+}
+
+function readScrollableAreaMetrics(jobId) {
+  const state = window.__kiritoriScrollCapture;
+  const element = state?.element;
+  if (!element || state.jobId !== jobId || !element.isConnected) return null;
+  const bounds = element.getBoundingClientRect();
+  const scaleX = element.offsetWidth ? bounds.width / element.offsetWidth : 1;
+  const scaleY = element.offsetHeight ? bounds.height / element.offsetHeight : 1;
+  return {
+    scrollTop: element.scrollTop * scaleY,
+    scrollHeight: element.scrollHeight * scaleY,
+    clientHeight: element.clientHeight * scaleY,
+    clientWidth: element.clientWidth * scaleX,
+    rect: {
+      x: bounds.left + element.clientLeft * scaleX,
+      y: bounds.top + element.clientTop * scaleY,
+      width: element.clientWidth * scaleX,
+      height: element.clientHeight * scaleY
+    }
+  };
+}
+
+function hideScrollableAreaSticky(jobId) {
+  const state = window.__kiritoriScrollCapture;
+  if (!state || state.jobId !== jobId || !state.element?.isConnected) return 0;
+  const markerName = "data-kiritori-scroll-sticky";
+  let hidden = 0;
+  for (const element of state.element.querySelectorAll("*")) {
+    const position = getComputedStyle(element).position;
+    if ((position !== "fixed" && position !== "sticky") || element.hasAttribute(markerName)) continue;
+    const saved = {
+      owner: "kiritori", version: 1, jobId,
+      visibility: element.style.getPropertyValue("visibility"),
+      visibilityPriority: element.style.getPropertyPriority("visibility"),
+      hadStyle: element.hasAttribute("style"),
+      previousMarker: element.getAttribute(markerName)
+    };
+    element.setAttribute(markerName, JSON.stringify(saved));
+    element.style.setProperty("visibility", "hidden", "important");
+    hidden += 1;
+  }
+  return hidden;
+}
+
+function suppressScrollableAreaHover(jobId) {
+  const state = window.__kiritoriScrollCapture;
+  if (!state || state.jobId !== jobId || !state.element?.isConnected || state.interactionStyle) return false;
+  const style = document.createElement("style");
+  style.setAttribute("data-kiritori-scroll-interaction", JSON.stringify({ owner: "kiritori", version: 1, jobId }));
+  style.textContent = "body, body * { pointer-events: none !important; }";
+  document.documentElement.appendChild(style);
+  state.interactionStyle = style;
+  return true;
+}
+
+async function waitForScrollableAreaStable(jobId) {
+  const readMetrics = () => {
+    const state = window.__kiritoriScrollCapture;
+    const element = state?.element;
+    if (!element || state.jobId !== jobId || !element.isConnected) return null;
+    const rect = element.getBoundingClientRect();
+    const scaleX = element.offsetWidth ? rect.width / element.offsetWidth : 1;
+    const scaleY = element.offsetHeight ? rect.height / element.offsetHeight : 1;
+    return {
+      scrollTop: element.scrollTop * scaleY,
+      scrollHeight: element.scrollHeight * scaleY,
+      clientHeight: element.clientHeight * scaleY,
+      clientWidth: element.clientWidth * scaleX,
+      rect: {
+        x: rect.left + element.clientLeft * scaleX,
+        y: rect.top + element.clientTop * scaleY,
+        width: element.clientWidth * scaleX,
+        height: element.clientHeight * scaleY
+      }
+    };
+  };
+  let metrics = readMetrics();
+  if (!metrics) return null;
+  let stableChecks = 0;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    const next = readMetrics();
+    if (!next) return null;
+    stableChecks = next.scrollHeight === metrics.scrollHeight ? stableChecks + 1 : 0;
+    metrics = next;
+    if (stableChecks >= 2) break;
+  }
+  return metrics;
+}
+
+function restoreScrollableArea(jobId) {
+  const state = window.__kiritoriScrollCapture;
+  if (!state || state.jobId !== jobId) return false;
+  if (state.interactionStyle?.isConnected) state.interactionStyle.remove();
+  const interactionMarkerName = "data-kiritori-scroll-interaction";
+  for (const style of document.querySelectorAll(`style[${interactionMarkerName}]`)) {
+    let saved;
+    try { saved = JSON.parse(style.getAttribute(interactionMarkerName) || "null"); } catch (_) { continue; }
+    if (saved?.owner === "kiritori" && saved.version === 1 && saved.jobId === jobId) style.remove();
+  }
+  const stickyMarkerName = "data-kiritori-scroll-sticky";
+  for (const element of document.querySelectorAll(`[${stickyMarkerName}]`)) {
+    let saved;
+    try { saved = JSON.parse(element.getAttribute(stickyMarkerName) || "null"); } catch (_) { continue; }
+    if (saved?.owner !== "kiritori" || saved.version !== 1 || saved.jobId !== jobId) continue;
+    if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
+      if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
+      else element.style.removeProperty("visibility");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
+    if (saved.previousMarker === null) element.removeAttribute(stickyMarkerName);
+    else element.setAttribute(stickyMarkerName, saved.previousMarker);
+  }
+  const element = state.element;
+  if (element?.isConnected) {
+    element.scrollTop = state.originalTop;
+    element.scrollLeft = state.originalLeft;
+    if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+      if (state.scrollBehavior) element.style.setProperty("scroll-behavior", state.scrollBehavior, state.scrollPriority);
+      else element.style.removeProperty("scroll-behavior");
+      if (!state.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
+    if (state.markerName) {
+      let saved;
+      try { saved = JSON.parse(element.getAttribute(state.markerName) || "null"); } catch (_) {}
+      if (saved?.owner === "kiritori" && saved.version === 1) {
+        if (saved.previousMarker === null) element.removeAttribute(state.markerName);
+        else element.setAttribute(state.markerName, saved.previousMarker);
+      }
+    }
+  }
+  delete window.__kiritoriScrollCapture;
+  return true;
 }
 
 function restoreManualHiddenElements(jobId) {
@@ -1015,8 +1538,20 @@ function successMessage(options, saved, copied) {
 
 function describeFailure(error, phase) {
   const message = String(error?.message || "");
+  if (/スクロール領域が長すぎ/.test(message)) {
+    return { reason: "スクロール領域が長すぎて一度に撮影できません。", advice: "撮影範囲を小さくするか、ページ全体・表示中の範囲で分けて撮影してください。" };
+  }
+  if (/スクロール領域全体が画面に表示/.test(message)) {
+    return { reason: "選んだスクロール領域が画面内に収まっていません。", advice: "ページをスクロールして領域全体を表示してから、もう一度選択してください。" };
+  }
+  if (/スクロール領域を縦にスクロール/.test(message)) {
+    return { reason: "選んだ領域を縦にスクロールできませんでした。", advice: "縦にスクロールできる表や領域を選び直してください。" };
+  }
+  if (/スクロール領域がページ内から見つかりません/.test(message)) {
+    return { reason: "撮影中にスクロール領域が見つからなくなりました。", advice: "ページを開いたまま、もう一度撮影してください。" };
+  }
   if (/ページが長すぎ|ページ画像が大きすぎ|編集画像が大きすぎ/i.test(message)) {
-    return { reason: "ページまたは画像が大きすぎます。", advice: "表示中の範囲や選択範囲で分けて撮影してください。全ページ撮影は最大80画面・8,000万画素です。" };
+    return { reason: "ページまたは画像が大きすぎます。", advice: "表示中の範囲や選択範囲で分けて撮影してください。画像サイズの上限は8,000万画素です。" };
   }
   if (/タブが切り替わった/i.test(message)) {
     return { reason: "撮影中にタブが切り替わりました。", advice: "撮影するタブを開いたまま、もう一度実行してください。" };
@@ -1046,7 +1581,7 @@ async function rememberFailure(error, context = {}) {
   const details = describeFailure(error, context.phase);
   const failure = {
     time: new Date().toISOString(),
-    mode: ["viewport", "region", "full"].includes(context.mode) ? context.mode : null,
+    mode: ["viewport", "region", "full", "scroll-area"].includes(context.mode) ? context.mode : null,
     phase: ["preparing", "selecting", "capturing", "processing", "editing", "saving"].includes(context.phase) ? context.phase : null,
     currentFrame: Number.isInteger(context.currentFrame) && context.currentFrame > 0 ? context.currentFrame : 0,
     ...details
