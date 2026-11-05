@@ -60,6 +60,14 @@
       </select>
       <p id="scroll-area-note" class="note" hidden>縦スクロールする表などの領域を撮影します。領域全体を画面内に表示して選んでください。横に隠れている部分は含みません。</p>
 
+      <label for="capture-delay">撮影前の待ち時間</label>
+      <select id="capture-delay">
+        <option value="0">待たずに撮影</option>
+        <option value="3">3秒</option>
+        <option value="5">5秒</option>
+      </select>
+      <p class="note">待ち時間中にメニューやツールチップを表示できます。範囲選択などは待ち時間の後に始まります。</p>
+
       <label for="output-format">出力形式</label>
       <select id="output-format">
         <option value="png">PNG</option>

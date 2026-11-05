@@ -889,5 +889,26 @@
   },
   "m_3636fb55b1567a31": {
     "message": "Not applied when only copying to the clipboard."
+  },
+  "m_d251bb4d9f23a730": {
+    "message": "Delay before capture"
+  },
+  "m_aafbcf8cce6d3459": {
+    "message": "Capture immediately"
+  },
+  "m_606acd5b989ecfb8": {
+    "message": "3 seconds"
+  },
+  "m_84d62feff07d39b5": {
+    "message": "5 seconds"
+  },
+  "m_4b854ceb032ae85a": {
+    "message": "Open menus or tooltips during the delay. Region and element selection starts after the delay."
+  },
+  "m_60266c62bfb329f7": {
+    "message": "Capture starts in $1 seconds…"
+  },
+  "m_0352263586d1e731": {
+    "message": "Waiting to capture"
   }
 }

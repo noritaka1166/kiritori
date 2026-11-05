@@ -217,6 +217,7 @@ function captureStatus(job) {
     phase: job.phase,
     currentFrame: job.currentFrame,
     selectionKind: job.selectionKind || null,
+    countdownRemaining: job.countdownRemaining || 0,
     cancellable: job.cancellable,
     cancelRequested: job.cancelRequested,
     message: job.message || "",
@@ -230,11 +231,11 @@ function reportCapture(job, changes = {}) {
   job.revision = ++captureRevision;
   const status = captureStatus(job);
   lastCaptureStatus = status;
-  if (["full", "scroll-area"].includes(job.mode) && job.tabId) {
-    const text = job.active ? (job.currentFrame ? String(job.currentFrame) : "…") : "";
+  if ((["full", "scroll-area"].includes(job.mode) || job.hadCountdown) && job.tabId) {
+    const text = job.active ? (job.phase === "countdown" ? String(job.countdownRemaining) : job.currentFrame ? String(job.currentFrame) : "…") : "";
     chrome.action.setBadgeText({ text, tabId: job.tabId }).catch(() => undefined);
     chrome.action.setBadgeBackgroundColor({ color: "#1a73e8", tabId: job.tabId }).catch(() => undefined);
-    const description = job.cancelRequested ? kiriT("撮影をキャンセル中") : job.phase === "selecting" ? (job.mode === "scroll-area" && job.selectionKind === "scroll-area" ? kiriT("スクロール領域を選択中") : kiriT("隠す要素を選択中")) : job.phase === "editing" ? kiriT("プレビューで編集中") : job.phase === "processing" ? kiriT("画像をまとめています") : job.phase === "saving" ? kiriT("画像を出力中") : job.currentFrame ? kiriT("$1画面目を撮影中", job.currentFrame) : kiriT("撮影を準備中");
+    const description = job.cancelRequested ? kiriT("撮影をキャンセル中") : job.phase === "countdown" ? kiriT("$1秒後に撮影を開始します…", job.countdownRemaining) : job.phase === "selecting" ? (job.mode === "scroll-area" && job.selectionKind === "scroll-area" ? kiriT("スクロール領域を選択中") : kiriT("隠す要素を選択中")) : job.phase === "editing" ? kiriT("プレビューで編集中") : job.phase === "processing" ? kiriT("画像をまとめています") : job.phase === "saving" ? kiriT("画像を出力中") : job.currentFrame ? kiriT("$1画面目を撮影中", job.currentFrame) : kiriT("撮影を準備中");
     const title = job.active ? `KiriTori: ${description}` : "KiriTori";
     chrome.action.setTitle({ title, tabId: job.tabId }).catch(() => undefined);
   }
@@ -315,8 +316,35 @@ async function handleCapture(options, targetTab, job) {
     clearTimeout(badgeTimers.get(tab.id));
     badgeTimers.delete(tab.id);
   }
-  reportCapture(job);
-  throwIfCancelled(job);
+  const seconds = [3, 5].includes(options.captureDelay) ? options.captureDelay : 0;
+  if (seconds) {
+    job.hadCountdown = true;
+    const deadline = Date.now() + seconds * 1000;
+    let previousRemaining = 0;
+    try {
+      while (true) {
+        throwIfCancelled(job);
+        const remainingMs = deadline - Date.now();
+        if (remainingMs <= 0) break;
+        const remaining = Math.ceil(remainingMs / 1000);
+        if (remaining !== previousRemaining) {
+          reportCapture(job, { phase: "countdown", countdownRemaining: remaining, cancellable: true });
+          await executeInTab(tab.id, updateCountdownOverlay, [job.id, remaining, kiriT("$1秒後に撮影を開始します…", remaining)]);
+          previousRemaining = remaining;
+        }
+        await delay(Math.min(250, Math.max(0, deadline - Date.now())));
+      }
+    } finally {
+      await executeInTab(tab.id, updateCountdownOverlay, [job.id, 0, ""]);
+    }
+    throwIfCancelled(job);
+    await assertTabStillActive(tab.id, tab.windowId);
+    throwIfCancelled(job);
+    reportCapture(job, { phase: "preparing", countdownRemaining: 0, cancellable: ["full", "scroll-area"].includes(options.mode) });
+  } else {
+    reportCapture(job);
+    throwIfCancelled(job);
+  }
 
   await ensureOffscreenDocument();
   throwIfCancelled(job);
@@ -708,6 +736,54 @@ async function offscreenMessage(message) {
 async function executeInTab(tabId, func, args = []) {
   const results = await chrome.scripting.executeScript({ target: { tabId }, func, args });
   return results[0]?.result;
+}
+
+// Executed in the page's isolated world. The overlay never receives pointer input.
+async function updateCountdownOverlay(jobId, remaining, label) {
+  const key = "__kiriToriCountdown";
+  let state = globalThis[key];
+  if (state && state.jobId !== jobId) {
+    clearTimeout(state.timeout);
+    state.host.remove();
+    delete globalThis[key];
+    state = null;
+  }
+  if (!remaining) {
+    if (state) {
+      clearTimeout(state.timeout);
+      state.host.remove();
+      delete globalThis[key];
+      // Give Chrome a chance to repaint before capturing the page.
+      await new Promise(resolve => {
+        let finished = false;
+        const done = () => { if (!finished) { finished = true; clearTimeout(timer); resolve(); } };
+        const timer = setTimeout(done, 120);
+        requestAnimationFrame(() => requestAnimationFrame(done));
+      });
+    }
+    return;
+  }
+  if (!state) {
+    const host = document.createElement("div");
+    host.style.cssText = "all:initial;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:2147483647;pointer-events:none;";
+    const shadow = host.attachShadow({ mode: "closed" });
+    const badge = document.createElement("div");
+    badge.style.cssText = "all:initial;display:flex;align-items:center;justify-content:center;width:88px;height:88px;border:3px solid white;border-radius:50%;background:rgba(26,115,232,.94);box-shadow:0 4px 20px rgba(0,0,0,.35);color:white;font:700 48px/1 system-ui,sans-serif;pointer-events:none;";
+    badge.setAttribute("role", "status");
+    badge.setAttribute("aria-live", "polite");
+    shadow.appendChild(badge);
+    (document.documentElement || document.body).appendChild(host);
+    state = { jobId, host, badge, timeout: null };
+    globalThis[key] = state;
+  }
+  state.badge.textContent = String(remaining);
+  state.badge.setAttribute("aria-label", label);
+  clearTimeout(state.timeout);
+  // If the worker or page is interrupted, do not leave the badge on the page.
+  state.timeout = setTimeout(() => {
+    state.host.remove();
+    if (globalThis[key] === state) delete globalThis[key];
+  }, 1800);
 }
 
 async function assertTabStillActive(tabId, windowId) {
@@ -1675,7 +1751,7 @@ async function rememberFailure(error, context = {}) {
   const failure = {
     time: new Date().toISOString(),
     mode: ["viewport", "region", "full", "scroll-area"].includes(context.mode) ? context.mode : null,
-    phase: ["preparing", "selecting", "capturing", "processing", "editing", "saving"].includes(context.phase) ? context.phase : null,
+    phase: ["preparing", "countdown", "selecting", "capturing", "processing", "editing", "saving"].includes(context.phase) ? context.phase : null,
     currentFrame: Number.isInteger(context.currentFrame) && context.currentFrame > 0 ? context.currentFrame : 0,
     ...details
   };

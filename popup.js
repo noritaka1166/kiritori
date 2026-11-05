@@ -41,6 +41,7 @@ let siteHost = null;
 function siteKey(url) { try { const parsed = new URL(url); return ["http:", "https:"].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null; } catch (_) { return null; } }
 const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
+const captureDelay = document.querySelector("#capture-delay");
 const destination = document.querySelector("#destination");
 const filenamePattern = document.querySelector("#filename-pattern");
 const scrollSpeed = document.querySelector("#scroll-speed");
@@ -71,6 +72,7 @@ const clearFailures = document.querySelector("#clear-failures");
 const defaults = {
   mode: "viewport",
   format: "png",
+  captureDelay: 0,
   destination: "save",
   filenamePattern: "title-date",
   splitOutput: false,
@@ -102,7 +104,7 @@ async function refreshFailures() {
     failureHistory.hidden = failures.length === 0;
     failureStatus.textContent = "";
     const modes = { viewport: kiriT("表示中の範囲"), region: kiriT("選択範囲"), full: kiriT("ページ全体"), "scroll-area": kiriT("スクロール領域") };
-    const phases = { preparing: kiriT("準備中"), selecting: kiriT("要素選択中"), capturing: kiriT("撮影中"), processing: kiriT("画像処理中"), editing: kiriT("編集中"), saving: kiriT("出力中") };
+    const phases = { preparing: kiriT("準備中"), countdown: kiriT("撮影待機中"), selecting: kiriT("要素選択中"), capturing: kiriT("撮影中"), processing: kiriT("画像処理中"), editing: kiriT("編集中"), saving: kiriT("出力中") };
     for (const failure of failures) {
       const item = document.createElement("li");
       const meta = document.createElement("p");
@@ -149,11 +151,13 @@ function renderCaptureStatus(captureStatus) {
   if (captureStatus?.revision && captureStatus.revision < latestRevision) return;
   if (captureStatus?.revision) latestRevision = captureStatus.revision;
   captureBusy = Boolean(captureStatus?.active);
-  const showProgress = captureBusy && (["full", "scroll-area"].includes(captureStatus.mode) || captureStatus.phase === "editing" || captureStatus.phase === "selecting");
+  const showProgress = captureBusy && (["full", "scroll-area"].includes(captureStatus.mode) || captureStatus.phase === "editing" || captureStatus.phase === "selecting" || captureStatus.phase === "countdown");
   progressPanel.hidden = !showProgress;
   if (showProgress) {
     if (captureStatus.cancelRequested || captureStatus.phase === "cancelling") {
       progressText.textContent = kiriT("撮影をキャンセルしています…");
+    } else if (captureStatus.phase === "countdown") {
+      progressText.textContent = kiriT("$1秒後に撮影を開始します…", captureStatus.countdownRemaining);
     } else if (captureStatus.phase === "selecting") {
       progressText.textContent = captureStatus.selectionKind === "scroll-area" ? kiriT("ページ内の表など、縦にスクロールする領域を選んでください。") : kiriT("ページ上で隠す要素を選び、「選択完了」を押してください。");
     } else if (captureStatus.phase === "editing") {
@@ -223,6 +227,7 @@ function currentSettings() {
   return {
     mode: mode.value,
     format: format.value,
+    captureDelay: Number(captureDelay.value),
     destination: destination.value,
     filenamePattern: filenamePattern.value,
     splitOutput: splitOutput.checked,
@@ -255,6 +260,7 @@ function applySettings(captureSettings) {
     const settings = { ...defaults, ...captureSettings };
     if (["viewport", "region", "full", "scroll-area"].includes(settings.mode)) mode.value = settings.mode;
     format.value = ["png", "jpeg", "pdf"].includes(settings.format) ? settings.format : "png";
+    captureDelay.value = [0, 3, 5].includes(settings.captureDelay) ? String(settings.captureDelay) : "0";
     if (["save", "copy", "both"].includes(settings.destination)) destination.value = settings.destination;
     if (["title-date", "date-site-title", "site-date-title"].includes(settings.filenamePattern)) filenamePattern.value = settings.filenamePattern;
     splitOutput.checked = settings.splitOutput === true;
@@ -319,6 +325,7 @@ function updateControls() {
 
 mode.addEventListener("change", () => { updateControls(); saveSettings(); });
 format.addEventListener("change", () => { updateControls(); saveSettings(); });
+captureDelay.addEventListener("change", saveSettings);
 destination.addEventListener("change", () => { updateControls(); saveSettings(); });
 filenamePattern.addEventListener("change", saveSettings);
 splitOutput.addEventListener("change", saveSettings);
