@@ -40,6 +40,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     job.editorResolve?.(null);
     if (wasSelecting && job.tabId) {
       executeInTab(job.tabId, cancelManualSelection, [job.id]).catch(() => undefined);
+      if (job.selectionKind === "pagination") executeInTab(job.tabId, cancelPaginationSelection, [job.id]).catch(() => undefined);
     }
     sendResponse({ ok: true });
     return false;
@@ -76,9 +77,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })().then(sendResponse).catch(error => sendResponse({ ok: false, error: kiriT(error.message || "撮り直しを開始できませんでした。") })).finally(() => { job.editorRetakePending = false; });
     return true;
   }
-  if (message?.type === "capture:editor:load" || message?.type === "capture:editor:commit") {
+  if (["capture:editor:load", "capture:editor:commit", "capture:pagination:accept"].includes(message?.type)) {
     const job = activeCapture;
-    const validSender = sender?.url?.startsWith(chrome.runtime.getURL("editor.html")) && sender.tab?.id;
+    const isPaginationPreview = job?.mode === "pagination" && sender?.url?.startsWith(chrome.runtime.getURL("pagination-preview.html"));
+    const validSender = (isPaginationPreview || (job?.mode !== "pagination" && sender?.url?.startsWith(chrome.runtime.getURL("editor.html")))) && sender?.tab?.id;
     if (!job || job.id !== message.jobId || job.phase !== "editing" || !validSender ||
         (job.editorTabId && sender.tab.id !== job.editorTabId)) {
       sendResponse({ ok: false, error: kiriT("編集する画像が見つかりません。") });
@@ -86,10 +88,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     job.editorTabId = sender.tab.id;
     if (message.type === "capture:editor:load") {
-      sendResponse({ ok: true, url: job.previewUrl, format: job.editorOptions.format, destination: job.editorOptions.destination, meta: job.editorMeta, options: job.editorOptions });
+      sendResponse({ ok: true, url: job.previewUrl, format: job.editorOptions.format, destination: job.editorOptions.destination, meta: job.editorMeta, options: job.editorOptions, pagination: job.previewPages });
       return false;
     }
-    if (job.editorCommitted || job.editorRetakePending || typeof message.url !== "string" || !message.url.startsWith(`blob:chrome-extension://${chrome.runtime.id}/`)) {
+    if (message.type === "capture:pagination:accept" && isPaginationPreview && !job.editorCommitted && !job.editorRetakePending) {
+      job.editorCommitted = true;
+      reportCapture(job, { phase: "processing", cancellable: false });
+      job.editorResolve?.({ unchanged: true });
+      sendResponse({ ok: true });
+      return false;
+    }
+    if (message.type !== "capture:editor:commit" || isPaginationPreview || job.editorCommitted || job.editorRetakePending || typeof message.url !== "string" || !message.url.startsWith(`blob:chrome-extension://${chrome.runtime.id}/`)) {
       sendResponse({ ok: false, error: kiriT("編集画像を受け取れませんでした。") });
       return false;
     }
@@ -231,7 +240,7 @@ function reportCapture(job, changes = {}) {
   job.revision = ++captureRevision;
   const status = captureStatus(job);
   lastCaptureStatus = status;
-  if ((["full", "scroll-area"].includes(job.mode) || job.hadCountdown) && job.tabId) {
+  if ((["full", "scroll-area", "pagination"].includes(job.mode) || job.hadCountdown) && job.tabId) {
     const text = job.active ? (job.phase === "countdown" ? String(job.countdownRemaining) : job.currentFrame ? String(job.currentFrame) : "…") : "";
     chrome.action.setBadgeText({ text, tabId: job.tabId }).catch(() => undefined);
     chrome.action.setBadgeBackgroundColor({ color: "#1a73e8", tabId: job.tabId }).catch(() => undefined);
@@ -259,7 +268,7 @@ async function startCapture(options, targetTab) {
   const job = {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
     active: true, mode: options?.mode, phase: "preparing", currentFrame: 0,
-    cancellable: ["full", "scroll-area"].includes(options?.mode), cancelRequested: false,
+    cancellable: ["full", "scroll-area", "pagination"].includes(options?.mode), cancelRequested: false,
     tabId: targetTab?.id, offscreenStarted: false, revision: 0
   };
   activeCapture = job;
@@ -280,7 +289,7 @@ async function startCapture(options, targetTab) {
       job.id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
       job.editorTabId = null;
       job.editorCommitted = false;
-      reportCapture(job, { phase: "preparing", currentFrame: 0, cancellable: ["full", "scroll-area"].includes(job.mode) });
+      reportCapture(job, { phase: "preparing", currentFrame: 0, cancellable: ["full", "scroll-area", "pagination"].includes(job.mode) });
     }
   } catch (error) {
     if (job.offscreenStarted) await offscreenMessage({ type: "discard" }).catch(() => undefined);
@@ -295,7 +304,7 @@ async function startCapture(options, targetTab) {
 }
 
 async function handleCapture(options, targetTab, job) {
-  if (!options || !["viewport", "region", "full", "scroll-area"].includes(options.mode)) {
+  if (!options || !["viewport", "region", "full", "scroll-area", "pagination"].includes(options.mode)) {
     throw new Error("撮影範囲を選び直してください。");
   }
   if (!["png", "jpeg", "pdf"].includes(options.format)) {
@@ -307,6 +316,8 @@ async function handleCapture(options, targetTab, job) {
   if (options.format === "pdf" && options.destination !== "save") {
     throw new Error("PDFはファイル保存のみ対応しています。");
   }
+
+  if (options.mode === "pagination") { options = { ...options, destination: "save", removeAds: false, manualHide: false }; }
 
   const tabs = targetTab ? [] : await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const tab = targetTab || tabs[0];
@@ -340,7 +351,7 @@ async function handleCapture(options, targetTab, job) {
     throwIfCancelled(job);
     await assertTabStillActive(tab.id, tab.windowId);
     throwIfCancelled(job);
-    reportCapture(job, { phase: "preparing", countdownRemaining: 0, cancellable: ["full", "scroll-area"].includes(options.mode) });
+    reportCapture(job, { phase: "preparing", countdownRemaining: 0, cancellable: ["full", "scroll-area", "pagination"].includes(options.mode) });
   } else {
     reportCapture(job);
     throwIfCancelled(job);
@@ -356,6 +367,7 @@ async function handleCapture(options, targetTab, job) {
   let manualHideRequested = false;
   let scrollAreaSelected = false;
   let reachedLimit = false;
+  let paginationWarning = "";
   const maxFrames = Math.min(200, Math.max(1, Math.floor(Number(options.maxFrames) || 80)));
   const scrollWaitPresets = { fast: 200, normal: 600, slow: 1500 };
   const customWait = options.scrollWaitMs === null || options.scrollWaitMs === "" ? NaN : Number(options.scrollWaitMs);
@@ -381,10 +393,64 @@ async function handleCapture(options, targetTab, job) {
       }]);
       if (selection?.cancelled) job.cancelRequested = true;
       throwIfCancelled(job);
-      reportCapture(job, { phase: "preparing", cancellable: ["full", "scroll-area"].includes(options.mode) });
+      reportCapture(job, { phase: "preparing", cancellable: ["full", "scroll-area", "pagination"].includes(options.mode) });
     }
 
-    if (options.mode === "full") {
+    if (options.mode === "pagination") {
+      const page = await executeInTab(tab.id, readPageInfo);
+      reportCapture(job, { phase: "selecting", selectionKind: "pagination", cancellable: true });
+      const button = await executeInTab(tab.id, selectPaginationButton, [job.id, kiriT("ページ上の「次へ」ボタンを選んでください。"), kiriT("Escでキャンセル")]);
+      if (!button) { const error = new Error("撮影をキャンセルしました。"); error.name = "CaptureCancelled"; throw error; }
+      throwIfCancelled(job);
+      meta = { ...page, mode: "pagination" };
+      options.fileStem = makeFileStem(meta, options.filenamePattern);
+      await offscreenMessage({ type: "begin", meta, options });
+      job.offscreenStarted = true;
+      const limit = Math.min(50, Math.max(1, Math.floor(Number(options.paginationLimit) || 20)));
+      const waitMs = Math.min(10000, Math.max(500, Math.floor(Number(options.paginationWait) || 1500)));
+      const seen = new Set();
+      let stopped = false;
+      for (let index = 0; index < limit; index += 1) {
+        throwIfCancelled(job);
+        await assertTabStillActive(tab.id, tab.windowId);
+        const snapshot = await executeInTab(tab.id, paginationSnapshot);
+        if (seen.has(snapshot.signature)) { paginationWarning = kiriT("同じページが再表示されたため、そこで撮影を終了しました。"); stopped = true; break; }
+        seen.add(snapshot.signature);
+        reportCapture(job, { phase: "capturing", selectionKind: null, currentFrame: index + 1, cancellable: true });
+        if (lastFrameCapturedAt) await delay(Math.max(0, 510 - (Date.now() - lastFrameCapturedAt)));
+        throwIfCancelled(job);
+        const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+        lastFrameCapturedAt = Date.now();
+        await assertTabStillActive(tab.id, tab.windowId);
+        throwIfCancelled(job);
+        try {
+          await offscreenMessage({ type: "add-frame", image });
+        } catch (error) {
+          if (index > 0 && /ページ画像が大きすぎます/.test(error?.message || "")) {
+            paginationWarning = kiriT("画像サイズの上限に達したため、そこまでのページを保存しました。");
+            stopped = true;
+            break;
+          }
+          throw error;
+        }
+        if (index === limit - 1) break;
+        const click = await executeInTab(tab.id, clickPaginationButton, [button]);
+        if (click === "end") { stopped = true; break; }
+        if (click !== "clicked") { paginationWarning = kiriT("次へボタンを確認できないため、そこで撮影を終了しました。"); stopped = true; break; }
+        let elapsed = 0;
+        while (elapsed < waitMs) { const step = Math.min(250, waitMs - elapsed); await delay(step); elapsed += step; throwIfCancelled(job); }
+        let next = null;
+        for (let attempt = 0; attempt < 20; attempt += 1) {
+          throwIfCancelled(job);
+          await assertTabStillActive(tab.id, tab.windowId);
+          try { next = await executeInTab(tab.id, paginationSnapshot); } catch (_) { next = null; }
+          if (next?.ready && next.signature !== snapshot.signature) break;
+          await delay(250);
+        }
+        if (!next?.ready || next.signature === snapshot.signature) { paginationWarning = kiriT("ページの変化を確認できないため、そこで撮影を終了しました。"); stopped = true; break; }
+      }
+      if (!stopped) paginationWarning = kiriT("$1ページの上限まで撮影しました。続きは含まれていません。", limit);
+    } else if (options.mode === "full") {
       const prepared = await executeInTab(tab.id, prepareFullPage);
       try {
         throwIfCancelled(job);
@@ -563,14 +629,15 @@ async function handleCapture(options, targetTab, job) {
     const preview = await offscreenMessage({ type: "preview" });
     try {
       throwIfCancelled(job);
-      const edited = await openCaptureEditor(job, options, preview.url, meta);
+      if (options.mode === "pagination") meta.paginationWarning = paginationWarning;
+      const edited = await openCaptureEditor(job, options, preview.url, meta, preview);
       throwIfCancelled(job);
       if (edited.retry) {
         await offscreenMessage({ type: "discard" });
         job.offscreenStarted = false;
         return { retry: true, tab: edited.tab };
       }
-      await offscreenMessage({ type: "replace-image", url: edited.url });
+      if (!edited.unchanged) await offscreenMessage({ type: "replace-image", url: edited.url });
     } finally {
       await offscreenMessage({ type: "release", urls: [preview.url] }).catch(() => undefined);
     }
@@ -609,24 +676,25 @@ async function handleCapture(options, targetTab, job) {
     await offscreenMessage({ type: "release", urls: artifact.files.map((file) => file.url) });
   }
 
-  return { message: successMessage(options, saved, copied) + (reachedLimit ? " · " + kiriT("$1画面の上限まで撮影しました。続きは含まれていません。", maxFrames) : "") };
+  return { message: successMessage(options, saved, copied) + (paginationWarning ? " · " + paginationWarning : "") + (reachedLimit ? " · " + kiriT("$1画面の上限まで撮影しました。続きは含まれていません。", maxFrames) : "") };
 }
 
-async function openCaptureEditor(job, options, previewUrl, meta) {
+async function openCaptureEditor(job, options, previewUrl, meta, preview = null) {
   const choice = new Promise((resolve) => { job.editorResolve = resolve; });
   job.previewUrl = previewUrl;
+  job.previewPages = options.mode === "pagination" ? { width: preview.width, height: preview.height, pageHeight: preview.pageHeight, count: Math.ceil(preview.height / preview.pageHeight) } : null;
   job.editorOptions = { ...options };
   job.editorMeta = meta;
   job.editorCommitted = false;
   reportCapture(job, { phase: "editing", cancellable: true });
-  const editorTab = await chrome.tabs.create({ url: `${chrome.runtime.getURL("editor.html")}?job=${encodeURIComponent(job.id)}` });
+  const editorTab = await chrome.tabs.create({ url: `${chrome.runtime.getURL(options.mode === "pagination" ? "pagination-preview.html" : "editor.html")}?job=${encodeURIComponent(job.id)}` });
   job.editorTabId = editorTab.id;
   reportCapture(job);
   if (job.cancelRequested) job.editorResolve(null);
   const result = await choice;
   job.editorResolve = null;
   throwIfCancelled(job);
-  if (!result?.url && !result?.retry) throw new Error("編集した画像を受け取れませんでした。");
+  if (!result?.url && !result?.retry && !result?.unchanged) throw new Error("編集した画像を受け取れませんでした。");
   return result;
 }
 
@@ -784,6 +852,104 @@ async function updateCountdownOverlay(jobId, remaining, label) {
     state.host.remove();
     if (globalThis[key] === state) delete globalThis[key];
   }, 1800);
+}
+
+function selectPaginationButton(jobId, instruction, cancelText) {
+  return new Promise(resolve => {
+    const banner = document.createElement("div");
+    banner.style.cssText = "all:initial;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#174ea6;color:white;padding:12px 18px;border-radius:8px;font:14px/1.4 system-ui,sans-serif;box-shadow:0 2px 12px #0006;pointer-events:none;";
+    banner.textContent = `${instruction} · ${cancelText}`;
+    document.documentElement.appendChild(banner);
+    let done = false;
+    const finish = value => {
+      if (done) return;
+      done = true;
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("mousedown", onMouseDown, true);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKey, true);
+      banner.remove();
+      if (globalThis.__kiritoriPaginationPicker?.jobId === jobId) delete globalThis.__kiritoriPaginationPicker;
+      resolve(value);
+    };
+    const onKey = event => { if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); finish(null); } };
+    const onMouseDown = event => { event.preventDefault(); event.stopImmediatePropagation(); };
+    const onPointerDown = event => { event.stopImmediatePropagation(); };
+    const onClick = event => {
+      const element = event.target instanceof Element ? event.target.closest('button, a, [role="button"], [role="link"], input[type="button"], input[type="submit"], [tabindex][aria-label]') : null;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (!element) return;
+      const parts = [];
+      for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
+        if (node.id && document.querySelectorAll(`#${CSS.escape(node.id)}`).length === 1) { parts.unshift(`#${CSS.escape(node.id)}`); break; }
+        let position = 1;
+        for (let sibling = node.previousElementSibling; sibling; sibling = sibling.previousElementSibling) if (sibling.tagName === node.tagName) position++;
+        parts.unshift(`${node.localName}:nth-of-type(${position})`);
+      }
+      const label = (element.getAttribute("aria-label") || element.getAttribute("data-tooltip") || element.getAttribute("title") || element.textContent || element.value || "").trim().slice(0, 120);
+      let fallback = null;
+      for (const name of ["aria-label", "data-tooltip", "title"]) {
+        const value = element.getAttribute(name);
+        if (!value) continue;
+        const candidate = `${element.localName}[${name}=${JSON.stringify(value)}]`;
+        if (document.querySelectorAll(candidate).length === 1) { fallback = candidate; break; }
+      }
+      finish({ selector: parts.join(" > "), fallback, tag: element.localName, label });
+    };
+    globalThis.__kiritoriPaginationPicker = { jobId, cancel: () => finish(null) };
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("mousedown", onMouseDown, true);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKey, true);
+  });
+}
+
+function cancelPaginationSelection(jobId) {
+  if (globalThis.__kiritoriPaginationPicker?.jobId === jobId) globalThis.__kiritoriPaginationPicker.cancel();
+}
+
+function paginationSnapshot() {
+  const root = document.body;
+  const text = (root?.innerText || "").slice(0, 200000);
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+  return { signature: `${location.href}|${text.length}|${hash >>> 0}`, ready: document.readyState === "complete" };
+}
+
+function clickPaginationButton(button) {
+  const matches = element => {
+    if (!element || element.localName !== button.tag) return false;
+    const label = (element.getAttribute("aria-label") || element.getAttribute("data-tooltip") || element.getAttribute("title") || element.textContent || element.value || "").trim().slice(0, 120);
+    return label === button.label;
+  };
+  let element;
+  try {
+    element = document.querySelector(button.selector);
+    if (!matches(element) && button.fallback) {
+      const candidates = document.querySelectorAll(button.fallback);
+      element = candidates.length === 1 ? candidates[0] : null;
+    }
+  } catch (_) { return "missing"; }
+  if (!matches(element)) return "missing";
+  if (element.matches(":disabled, [disabled], [aria-disabled=true], .disabled") || element.closest('[aria-disabled="true"], [inert], .disabled') || !element.getClientRects().length || getComputedStyle(element).visibility !== "visible") return "end";
+  if (element.localName === "a") {
+    const href = element.getAttribute("href");
+    if (element.target && element.target.toLowerCase() !== "_self") return "missing";
+    if (href) { const url = new URL(href, location.href); if (!['http:', 'https:'].includes(url.protocol) || url.origin !== location.origin) return "missing"; }
+  }
+  setTimeout(() => {
+    if (!element.isConnected) return;
+    const rect = element.getBoundingClientRect();
+    const eventOptions = { bubbles: true, cancelable: true, composed: true, view: window, button: 0, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
+    if (typeof PointerEvent === "function") element.dispatchEvent(new PointerEvent("pointerdown", { ...eventOptions, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 1 }));
+    if (!element.isConnected) return;
+    element.dispatchEvent(new MouseEvent("mousedown", { ...eventOptions, buttons: 1, detail: 1 }));
+    if (!element.isConnected) return;
+    if (typeof PointerEvent === "function") element.dispatchEvent(new PointerEvent("pointerup", { ...eventOptions, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 0 }));
+    element.dispatchEvent(new MouseEvent("mouseup", { ...eventOptions, buttons: 0, detail: 1 }));
+    if (element.isConnected) element.dispatchEvent(new MouseEvent("click", { ...eventOptions, buttons: 0, detail: 1 }));
+  }, 0);
+  return "clicked";
 }
 
 async function assertTabStillActive(tabId, windowId) {
@@ -1750,7 +1916,7 @@ async function rememberFailure(error, context = {}) {
   const details = describeFailure(error, context.phase);
   const failure = {
     time: new Date().toISOString(),
-    mode: ["viewport", "region", "full", "scroll-area"].includes(context.mode) ? context.mode : null,
+    mode: ["viewport", "region", "full", "scroll-area", "pagination"].includes(context.mode) ? context.mode : null,
     phase: ["preparing", "countdown", "selecting", "capturing", "processing", "editing", "saving"].includes(context.phase) ? context.phase : null,
     currentFrame: Number.isInteger(context.currentFrame) && context.currentFrame > 0 ? context.currentFrame : 0,
     ...details

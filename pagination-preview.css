@@ -1,0 +1,27 @@
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #202124; background: #f1f3f6; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; background: white; border-bottom: 1px solid #dadce0; }
+.brand { display: flex; gap: 14px; align-items: baseline; }
+.brand strong { color: #1a73e8; font-size: 20px; }
+.brand span { font-size: 14px; }
+.actions, .modes, .pager, .toolbar { display: flex; align-items: center; gap: 8px; }
+button { font: inherit; border: 1px solid #c5cad2; border-radius: 7px; background: white; padding: 8px 14px; color: #202124; cursor: pointer; }
+button:hover:not(:disabled) { background: #f1f5fc; }
+button:disabled { opacity: .48; cursor: default; }
+button[aria-pressed="true"] { color: #174ea6; background: #e8f0fe; border-color: #8ab4f8; }
+button.primary { background: #1a73e8; border-color: #1a73e8; color: white; }
+button.primary:hover:not(:disabled) { background: #155ab6; }
+main { max-width: 1200px; margin: auto; padding: 20px; }
+.toolbar { justify-content: space-between; flex-wrap: wrap; }
+.pager { justify-content: center; }
+#counter { min-width: 90px; text-align: center; font-variant-numeric: tabular-nums; }
+#status, .warning { font-size: 14px; line-height: 1.5; }
+.warning { padding: 10px 12px; background: #fff4d6; border-radius: 6px; }
+.pages { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 12px 0 32px; }
+.page { margin: 0; width: min(100%, 1000px); }
+.page figcaption { color: #5f6368; font-size: 13px; margin: 0 0 6px; }
+.page-window { position: relative; overflow: hidden; width: 100%; background: white; box-shadow: 0 2px 12px #23334a26; }
+.page-window img { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; }
+[hidden] { display: none !important; }
+@media (max-width: 600px) { header { padding: 12px; } main { padding: 12px; } .brand span { display: none; } .toolbar { justify-content: center; } }
