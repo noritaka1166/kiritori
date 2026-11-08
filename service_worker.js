@@ -877,7 +877,17 @@ function selectPaginationButton(jobId, instruction, cancelText) {
       document.removeEventListener("keydown", onKey, true);
       banner.remove();
       if (globalThis.__kiritoriPaginationPicker?.jobId === jobId) delete globalThis.__kiritoriPaginationPicker;
-      resolve(value);
+      if (!value) { resolve(value); return; }
+      // Wait for the selection banner to disappear from the rendered page before capture.
+      let finished = false;
+      const finishAfterPaint = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(fallback);
+        resolve(value);
+      };
+      const fallback = setTimeout(finishAfterPaint, 300);
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(finishAfterPaint, 50)));
     };
     const onKey = event => { if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); finish(null); } };
     const onMouseDown = event => { event.preventDefault(); event.stopImmediatePropagation(); };
