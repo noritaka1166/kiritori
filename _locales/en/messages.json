@@ -1003,5 +1003,14 @@
   },
   "m_9dd1124637cc989e": {
     "message": "The scroll capture limit was reached; capture stopped on this page."
+  },
+  "m_26f0f67b5501a7d3": {
+    "message": "CAPTURE"
+  },
+  "m_7b89b24f26974974": {
+    "message": "Advanced settings"
+  },
+  "m_866257e9ead3b4d1": {
+    "message": "Editing drafts"
   }
 }

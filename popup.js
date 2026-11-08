@@ -1,4 +1,16 @@
 kiriLocalizeDocument();
+// Chrome sizes extension popups from their content. Wait until that sizing settles
+// before accommodating a window that genuinely has less than 480px available.
+let popupSizeTimer;
+function fitPopupToViewport() {
+  document.body.style.minHeight = window.innerHeight < 480 ? "0" : "";
+}
+function schedulePopupSizing() {
+  clearTimeout(popupSizeTimer);
+  popupSizeTimer = setTimeout(fitPopupToViewport, 200);
+}
+window.addEventListener("resize", schedulePopupSizing);
+schedulePopupSizing();
 const draftRetention = document.querySelector("#draft-retention");
 const draftList = document.querySelector("#draft-list");
 const draftListStatus = document.querySelector("#draft-list-status");
