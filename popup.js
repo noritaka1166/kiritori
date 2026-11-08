@@ -41,6 +41,9 @@ let siteHost = null;
 function siteKey(url) { try { const parsed = new URL(url); return ["http:", "https:"].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null; } catch (_) { return null; } }
 const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
+const paginationSetting = document.querySelector("#pagination-setting");
+const paginationLimit = document.querySelector("#pagination-limit");
+const paginationWait = document.querySelector("#pagination-wait");
 const captureDelay = document.querySelector("#capture-delay");
 const destination = document.querySelector("#destination");
 const filenamePattern = document.querySelector("#filename-pattern");
@@ -73,6 +76,8 @@ const defaults = {
   mode: "viewport",
   format: "png",
   captureDelay: 0,
+  paginationLimit: 20,
+  paginationWait: 1500,
   destination: "save",
   filenamePattern: "title-date",
   splitOutput: false,
@@ -103,7 +108,7 @@ async function refreshFailures() {
     const failures = Array.isArray(response.failures) ? response.failures.slice(0, 10) : [];
     failureHistory.hidden = failures.length === 0;
     failureStatus.textContent = "";
-    const modes = { viewport: kiriT("表示中の範囲"), region: kiriT("選択範囲"), full: kiriT("ページ全体"), "scroll-area": kiriT("スクロール領域") };
+    const modes = { viewport: kiriT("表示中の範囲"), region: kiriT("選択範囲"), full: kiriT("ページ全体"), "scroll-area": kiriT("スクロール領域"), pagination: kiriT("ページ送りをしながら撮影") };
     const phases = { preparing: kiriT("準備中"), countdown: kiriT("撮影待機中"), selecting: kiriT("要素選択中"), capturing: kiriT("撮影中"), processing: kiriT("画像処理中"), editing: kiriT("編集中"), saving: kiriT("出力中") };
     for (const failure of failures) {
       const item = document.createElement("li");
@@ -151,7 +156,7 @@ function renderCaptureStatus(captureStatus) {
   if (captureStatus?.revision && captureStatus.revision < latestRevision) return;
   if (captureStatus?.revision) latestRevision = captureStatus.revision;
   captureBusy = Boolean(captureStatus?.active);
-  const showProgress = captureBusy && (["full", "scroll-area"].includes(captureStatus.mode) || captureStatus.phase === "editing" || captureStatus.phase === "selecting" || captureStatus.phase === "countdown");
+  const showProgress = captureBusy && (["full", "scroll-area", "pagination"].includes(captureStatus.mode) || captureStatus.phase === "editing" || captureStatus.phase === "selecting" || captureStatus.phase === "countdown");
   progressPanel.hidden = !showProgress;
   if (showProgress) {
     if (captureStatus.cancelRequested || captureStatus.phase === "cancelling") {
@@ -159,7 +164,7 @@ function renderCaptureStatus(captureStatus) {
     } else if (captureStatus.phase === "countdown") {
       progressText.textContent = kiriT("$1秒後に撮影を開始します…", captureStatus.countdownRemaining);
     } else if (captureStatus.phase === "selecting") {
-      progressText.textContent = captureStatus.selectionKind === "scroll-area" ? kiriT("ページ内の表など、縦にスクロールする領域を選んでください。") : kiriT("ページ上で隠す要素を選び、「選択完了」を押してください。");
+      progressText.textContent = captureStatus.selectionKind === "pagination" ? kiriT("ページ上の「次へ」ボタンを選んでください。") : captureStatus.selectionKind === "scroll-area" ? kiriT("ページ内の表など、縦にスクロールする領域を選んでください。") : kiriT("ページ上で隠す要素を選び、「選択完了」を押してください。");
     } else if (captureStatus.phase === "editing") {
       progressText.textContent = kiriT("プレビュー画面で画像を確認・編集してください。");
     } else if (captureStatus.phase === "processing") {
@@ -167,7 +172,7 @@ function renderCaptureStatus(captureStatus) {
     } else if (captureStatus.phase === "saving") {
       progressText.textContent = kiriT("撮影した画像を出力しています…");
     } else if (captureStatus.currentFrame > 0) {
-      progressText.textContent = kiriT("現在$1画面目を撮影中…", captureStatus.currentFrame);
+      progressText.textContent = captureStatus.mode === "pagination" ? kiriT("現在$1ページ目を撮影中…", captureStatus.currentFrame) : kiriT("現在$1画面目を撮影中…", captureStatus.currentFrame);
     } else {
       progressText.textContent = kiriT("撮影を準備しています…");
     }
@@ -228,6 +233,8 @@ function currentSettings() {
     mode: mode.value,
     format: format.value,
     captureDelay: Number(captureDelay.value),
+    paginationLimit: Math.min(50, Math.max(1, Math.floor(Number(paginationLimit.value) || 20))),
+    paginationWait: Math.min(10000, Math.max(500, Math.floor(Number(paginationWait.value) || 1500))),
     destination: destination.value,
     filenamePattern: filenamePattern.value,
     splitOutput: splitOutput.checked,
@@ -258,9 +265,11 @@ async function saveSettings() {
 function applySettings(captureSettings) {
   if (captureSettings) {
     const settings = { ...defaults, ...captureSettings };
-    if (["viewport", "region", "full", "scroll-area"].includes(settings.mode)) mode.value = settings.mode;
+    if (["viewport", "region", "full", "scroll-area", "pagination"].includes(settings.mode)) mode.value = settings.mode;
     format.value = ["png", "jpeg", "pdf"].includes(settings.format) ? settings.format : "png";
     captureDelay.value = [0, 3, 5].includes(settings.captureDelay) ? String(settings.captureDelay) : "0";
+    paginationLimit.value = Math.min(50, Math.max(1, Math.floor(Number(settings.paginationLimit) || 20)));
+    paginationWait.value = Math.min(10000, Math.max(500, Math.floor(Number(settings.paginationWait) || 1500)));
     if (["save", "copy", "both"].includes(settings.destination)) destination.value = settings.destination;
     if (["title-date", "date-site-title", "site-date-title"].includes(settings.filenamePattern)) filenamePattern.value = settings.filenamePattern;
     splitOutput.checked = settings.splitOutput === true;
@@ -309,16 +318,23 @@ siteSettingsEnabled.addEventListener("change", async () => {
 
 function updateControls() {
   const isPdf = format.value === "pdf";
+  const isPagination = mode.value === "pagination";
+  paginationSetting.hidden = !isPagination;
+  previewEdit.disabled = false;
+  document.querySelector("#preview-label").textContent = isPagination ? kiriT("出力前にプレビュー") : kiriT("出力前にプレビュー・編集");
+  document.querySelector("#preview-note").hidden = isPagination;
+  removeAds.disabled = isPagination;
+  manualHide.disabled = isPagination;
   scrollAreaNote.hidden = mode.value !== "scroll-area";
   frameLimitSetting.hidden = !["full", "scroll-area"].includes(mode.value);
   scrollSpeedSetting.hidden = !["full", "scroll-area"].includes(mode.value);
   scrollWaitCustom.hidden = scrollSpeed.value !== "custom";
   for (const option of destination.options) {
     if (option.value === "copy" || option.value === "both") {
-      option.disabled = isPdf;
+      option.disabled = isPdf || isPagination;
     }
   }
-  if (isPdf && destination.value !== "save") destination.value = "save";
+  if ((isPdf || isPagination) && destination.value !== "save") destination.value = "save";
   folderRow.hidden = destination.value === "copy";
   splitSetting.hidden = !["full", "scroll-area"].includes(mode.value) || destination.value === "copy";
 }
@@ -326,6 +342,8 @@ function updateControls() {
 mode.addEventListener("change", () => { updateControls(); saveSettings(); });
 format.addEventListener("change", () => { updateControls(); saveSettings(); });
 captureDelay.addEventListener("change", saveSettings);
+paginationLimit.addEventListener("change", saveSettings);
+paginationWait.addEventListener("change", saveSettings);
 destination.addEventListener("change", () => { updateControls(); saveSettings(); });
 filenamePattern.addEventListener("change", saveSettings);
 splitOutput.addEventListener("change", saveSettings);

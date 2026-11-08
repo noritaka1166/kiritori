@@ -910,5 +910,80 @@
   },
   "m_0352263586d1e731": {
     "message": "Waiting to capture"
+  },
+  "m_d057e5085f97106e": {
+    "message": "Capture paginated pages"
+  },
+  "m_7006aeef8ab3e979": {
+    "message": "Select the Next button first. Each visible page is saved as numbered images or a multipage PDF. Preview editing, clipboard copying, and ad hiding are unavailable."
+  },
+  "m_80fa316d24c936f9": {
+    "message": "Maximum pages"
+  },
+  "m_868c2cd156212fde": {
+    "message": "Wait after changing pages (ms)"
+  },
+  "m_bfbbcded7b47d157": {
+    "message": "Select the Next button on the page."
+  },
+  "m_6e8d48e06116921f": {
+    "message": "Press Esc to cancel"
+  },
+  "m_b9d94d7ea65d5208": {
+    "message": "Capturing page $1…"
+  },
+  "m_2e9e2afe01300c12": {
+    "message": "Capture stopped because a page was repeated."
+  },
+  "m_44a71ee7d87d9f78": {
+    "message": "Capture stopped because the Next button could not be verified."
+  },
+  "m_b70ff05f133bf32b": {
+    "message": "Capture stopped because the page did not change."
+  },
+  "m_f38bc38bb18c31a2": {
+    "message": "Captured the maximum of $1 pages; remaining pages are not included."
+  },
+  "m_309f1d7691ae9272": {
+    "message": "The viewport size changed. Restore the window size and try again."
+  },
+  "m_97eccb4bbc5af099": {
+    "message": "The image size limit was reached; captured pages were saved."
+  },
+  "m_8adc964bfad2d7b1": {
+    "message": "Select the Next button first. Each visible page is saved as numbered images or a multipage PDF. Copying, ad hiding and image editing in the preview are unavailable."
+  },
+  "m_caec418389cf177d": {
+    "message": "Preview before saving"
+  },
+  "m_2e309f63c2854844": {
+    "message": "KiriTori - Page preview"
+  },
+  "m_1a43a945ee90d22c": {
+    "message": "Page preview"
+  },
+  "m_232ad2de42711d4e": {
+    "message": "View mode"
+  },
+  "m_57a0a5a7fc84c697": {
+    "message": "One page"
+  },
+  "m_fc79cb71232e45b1": {
+    "message": "Vertical list"
+  },
+  "m_83d4591537d498d7": {
+    "message": "Previous page"
+  },
+  "m_7c213eb5169fa111": {
+    "message": "Next page"
+  },
+  "m_cc6358181d059698": {
+    "message": "Page $1"
+  },
+  "m_1feca62f9c807414": {
+    "message": "Review the images, then save."
+  },
+  "m_1e247b2fb42a9afa": {
+    "message": "The preview disconnected. Please capture again."
   }
 }

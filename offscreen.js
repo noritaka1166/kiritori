@@ -46,7 +46,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "preview") {
     (async () => {
       if (!captureState?.canvas) throw new Error("プレビューする画像がありません。");
-      return { url: makeObjectUrl(await canvasBlob(captureState.canvas, "image/png")) };
+      const { canvas, pageHeightPixels } = captureState;
+      return { url: makeObjectUrl(await canvasBlob(canvas, "image/png")), width: canvas.width, height: canvas.height, pageHeight: pageHeightPixels || 0 };
     })().then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
@@ -111,6 +112,14 @@ async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight, crop) {
   const bitmap = await createImageBitmap(await response.blob());
   const { meta, options } = captureState;
   const framePageHeight = Number.isFinite(pageHeight) ? pageHeight : meta.pageHeight;
+  if (meta.mode === "pagination" && captureState.canvas) {
+    if (bitmap.width !== captureState.canvas.width || bitmap.height !== captureState.pageHeightPixels) { bitmap.close(); throw new Error("ページの表示サイズが変わりました。ウィンドウを元のサイズに戻して再撮影してください。"); }
+    const top = captureState.canvas.height;
+    expandFullPageCanvas(getSafeFullPageHeight(bitmap.width, top + bitmap.height));
+    captureState.context.drawImage(bitmap, 0, top);
+    bitmap.close();
+    return;
+  }
   if (meta.mode === "full") {
     const measuredPageHeight = Number.isFinite(currentPageHeight) ? currentPageHeight : framePageHeight;
     meta.pageHeight = Math.max(meta.pageHeight, measuredPageHeight);
@@ -143,6 +152,7 @@ async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight, crop) {
       captureState.canvas.width = bitmap.width;
       captureState.canvas.height = bitmap.height;
     }
+    if (meta.mode === "pagination") captureState.pageHeightPixels = bitmap.height;
     captureState.context = captureState.canvas.getContext("2d", { alpha: false });
     if (!captureState.context) {
       bitmap.close();
@@ -222,9 +232,9 @@ function expandFullPageCanvas(requiredHeight) {
 async function finishCapture() {
   if (!captureState?.canvas) throw new Error("撮影画像がありません。");
   const { canvas, meta, options, scale } = captureState;
-  const split = options.splitOutput === true && ["full", "scroll-area"].includes(meta.mode) && options.destination !== "copy";
+  const split = meta.mode === "pagination" || (options.splitOutput === true && ["full", "scroll-area"].includes(meta.mode) && options.destination !== "copy");
   const viewportHeight = meta.mode === "scroll-area" ? meta.scrollArea.clientHeight : meta.viewportHeight;
-  const partHeight = split ? Math.max(1, Math.round(viewportHeight * scale)) : canvas.height;
+  const partHeight = meta.mode === "pagination" ? (captureState.pageHeightPixels || Math.round(viewportHeight * scale)) : split ? Math.max(1, Math.round(viewportHeight * scale)) : canvas.height;
   const partCount = split ? Math.ceil(canvas.height / partHeight) : 1;
   const needsCopy = options.destination === "copy" || options.destination === "both";
   const needsSave = options.destination !== "copy";
