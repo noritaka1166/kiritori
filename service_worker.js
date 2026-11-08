@@ -88,7 +88,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     job.editorTabId = sender.tab.id;
     if (message.type === "capture:editor:load") {
-      sendResponse({ ok: true, url: job.previewUrl, format: job.editorOptions.format, destination: job.editorOptions.destination, meta: job.editorMeta, options: job.editorOptions, pagination: job.previewPages });
+      sendResponse({ ok: true, url: job.previewUrl, format: job.editorOptions.format, destination: job.editorOptions.destination, meta: job.editorMeta, options: job.editorOptions, pagination: job.previewPages, sourceTabId: job.tabId });
       return false;
     }
     if (message.type === "capture:pagination:accept" && isPaginationPreview && !job.editorCommitted && !job.editorRetakePending) {
@@ -694,7 +694,10 @@ async function openCaptureEditor(job, options, previewUrl, meta, preview = null)
   job.editorMeta = meta;
   job.editorCommitted = false;
   reportCapture(job, { phase: "editing", cancellable: true });
-  const editorTab = await chrome.tabs.create({ url: `${chrome.runtime.getURL(options.mode === "pagination" ? "pagination-preview.html" : "editor.html")}?job=${encodeURIComponent(job.id)}` });
+  const url = `${chrome.runtime.getURL(options.mode === "pagination" ? "pagination-preview.html" : "editor.html")}?job=${encodeURIComponent(job.id)}`;
+  let sourceTab;
+  try { sourceTab = await chrome.tabs.get(job.tabId); } catch (_) { /* The source tab may have been closed. */ }
+  const editorTab = await chrome.tabs.create({ url, ...(sourceTab?.id && sourceTab.windowId != null ? { windowId: sourceTab.windowId, openerTabId: sourceTab.id } : {}) });
   job.editorTabId = editorTab.id;
   reportCapture(job);
   if (job.cancelRequested) job.editorResolve(null);

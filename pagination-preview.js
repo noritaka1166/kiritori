@@ -52,7 +52,20 @@ save.addEventListener("click", async () => {
   }
 });
 cancel.addEventListener("click", async () => {
-  if (terminal) { window.close(); return; }
+  if (terminal) {
+    if (Number.isInteger(data?.sourceTabId)) {
+      try {
+        const source = await chrome.tabs.update(data.sourceTabId, { active: true });
+        if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
+      } catch (_) { /* The source tab may have been closed. */ }
+    }
+    try {
+      const tab = await chrome.tabs.getCurrent();
+      if (tab?.id) await chrome.tabs.remove(tab.id);
+      else window.close();
+    } catch (_) { window.close(); }
+    return;
+  }
   cancel.disabled = true;
   try {
     const response = await chrome.runtime.sendMessage({ type: "capture:cancel", jobId });

@@ -73,6 +73,7 @@ async function deleteDraft() {
   if (draftDb && draftData) await draftDb.delete(draftData.id);
 }
 let sourceImage;
+let sourceTabId = null;
 let history = [];
 let redoStack = [];
 let tool = "crop";
@@ -932,6 +933,12 @@ exportButton.addEventListener("click", async () => {
 
 cancelButton.addEventListener("click", async () => {
   if (terminal || restoredDraftId) {
+    if (Number.isInteger(sourceTabId)) {
+      try {
+        const source = await chrome.tabs.update(sourceTabId, { active: true });
+        if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
+      } catch (_) { /* The source tab may have been closed. */ }
+    }
     try {
       const tab = await chrome.tabs.getCurrent();
       if (tab?.id) await chrome.tabs.remove(tab.id);
@@ -1013,6 +1020,7 @@ async function initialize() {
   heartbeat = setInterval(() => { try { port.postMessage({ type: "heartbeat" }); } catch (_) { clearInterval(heartbeat); } }, 20_000);
   const response = await chrome.runtime.sendMessage({ type: "capture:editor:load", jobId });
   if (!response?.ok) throw new Error(response?.error || kiriT("画像を読み込めませんでした。"));
+  sourceTabId = Number.isInteger(response.sourceTabId) ? response.sourceTabId : null;
   sourceImage = new Image();
   sourceImage.src = response.url;
   await sourceImage.decode();
