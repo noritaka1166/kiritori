@@ -1,5 +1,7 @@
 # KiriTori
 
+![KiriTori icon](icons/icon-bird-128.png)
+
 [English](README.md) | [日本語](README.ja.md) | 简体中文
 
 KiriTori 是一款基于 Chrome Manifest V3 的本地截图扩展。截图与图像处理均在浏览器内完成，不会将页面内容上传至外部服务。
