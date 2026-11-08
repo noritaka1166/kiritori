@@ -16,6 +16,8 @@ body {
 main { padding: 16px; }
 
 header { margin-bottom: 16px; }
+header .brand { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+header .brand img { display: block; flex: none; }
 
 .failure-history {
   padding: 10px 12px;
@@ -59,7 +61,7 @@ header { margin-bottom: 16px; }
 .capture-progress button[hidden] { display: none; }
 
 h1 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 18px;
   font-weight: 650;
 }

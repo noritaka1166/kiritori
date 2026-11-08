@@ -7,6 +7,8 @@ button:hover { background: #edf3ff; }
 button:disabled { cursor: not-allowed; opacity: .48; }
 button:focus-visible, input:focus-visible { outline: 3px solid #9bbfff; outline-offset: 2px; }
 .header { min-height: 64px; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #fff; border-bottom: 1px solid #dfe4eb; }
+.header .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.header .brand img { flex: none; display: block; }
 .header strong { font-size: 19px; color: #174ea6; }
 .header span { margin-left: 14px; color: #596579; font-size: 14px; }
 .actions { display: flex; gap: 8px; }

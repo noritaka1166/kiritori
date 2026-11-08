@@ -2,7 +2,7 @@
 
 *撮って、整えて、手元に残す。*
 
-![KiriTori icon](icons/icon-bird-128.png)
+![KiriTori icon](icons/icon-bird.svg)
 
 [English](README.md) | 日本語 | [简体中文](README.zh-CN.md)
 

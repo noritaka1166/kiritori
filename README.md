@@ -2,7 +2,7 @@
 
 *Capture clearly. Edit freely. Keep it local.*
 
-![KiriTori icon](icons/icon-bird-128.png)
+![KiriTori icon](icons/icon-bird.svg)
 
 English | [日本語](README.ja.md) | [简体中文](README.zh-CN.md)
 

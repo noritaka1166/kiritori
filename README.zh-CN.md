@@ -2,7 +2,7 @@
 
 *轻松截取，自由编辑，留在本地。*
 
-![KiriTori icon](icons/icon-bird-128.png)
+![KiriTori icon](icons/icon-bird.svg)
 
 [English](README.md) | [日本語](README.ja.md) | 简体中文
 

@@ -2,7 +2,8 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; background: white; border-bottom: 1px solid #dadce0; }
-.brand { display: flex; gap: 14px; align-items: baseline; }
+.brand { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.brand img { flex: none; display: block; }
 .brand strong { color: #1a73e8; font-size: 20px; }
 .brand span { font-size: 14px; }
 .actions, .modes, .pager, .toolbar { display: flex; align-items: center; gap: 8px; }
