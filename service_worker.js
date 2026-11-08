@@ -194,6 +194,12 @@ function registerContextMenus() {
       title: kiriT("スクロール領域を撮影"),
       contexts: ["all"]
     });
+    chrome.contextMenus.create({
+      id: "local-capture-pagination",
+      parentId: "local-capture-root",
+      title: kiriT("ページ送りをしながら撮影"),
+      contexts: ["all"]
+    });
   });
 }
 chrome.runtime.onInstalled.addListener(registerContextMenus);
@@ -204,7 +210,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     "local-capture-viewport": "viewport",
     "local-capture-region": "region",
     "local-capture-full": "full",
-    "local-capture-scroll-area": "scroll-area"
+    "local-capture-scroll-area": "scroll-area",
+    "local-capture-pagination": "pagination"
   };
   const mode = modeByMenuId[info.menuItemId];
   if (!mode || !tab?.id) return;
