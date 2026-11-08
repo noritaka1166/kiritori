@@ -1,5 +1,7 @@
 # KiriTori
 
+![KiriTori icon](icons/icon-bird-128.png)
+
 [English](README.md) | 日本語 | [简体中文](README.zh-CN.md)
 
 Chrome Manifest V3 のローカル画面キャプチャ拡張です。ページの撮影画像と変換処理はブラウザー内で行い、外部サービスへの送信はありません。

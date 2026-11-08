@@ -1,5 +1,7 @@
 # KiriTori
 
+![KiriTori icon](icons/icon-bird-128.png)
+
 English | [日本語](README.ja.md) | [简体中文](README.zh-CN.md)
 
 KiriTori is a local Chrome screenshot extension. Captures and image processing stay in your browser; page content is not uploaded.
