@@ -1,136 +1,61 @@
 # KiriTori
 
-[English](README.en.md)
+English | [日本語](README.ja.md) | [简体中文](README.zh-CN.md)
 
-Chrome Manifest V3 のローカル画面キャプチャ拡張です。ページの撮影画像と変換処理はブラウザー内で行い、外部サービスへの送信はありません。
+KiriTori is a local Chrome screenshot extension. Captures and image processing stay in your browser; page content is not uploaded.
 
-表示言語はChromeの表示言語に合わせて、日本語・英語・中国語（簡体字／繁体字）に切り替わります。対応していない言語では英語が使われます。Chromeの言語設定を変更した場合は、必要に応じてChromeを再起動してください。
+The interface follows Chrome's display language: English, Japanese, Simplified Chinese, or Traditional Chinese. Other languages fall back to English. Restart Chrome after changing its display language if necessary.
 
-## できること
+## Install
 
-- 表示中の範囲を撮影
-- ページ上でドラッグして選択した範囲を撮影
-- ページを縦にスクロールしながら全体を撮影・結合（遅延読み込みにも追従）
-- ページ内の表など、縦スクロールする領域を選んで全体を撮影・結合
-- PNG、JPEG、PDFで出力
-- Downloads 配下のフォルダーに保存、またはクリップボードへコピー
-- 設定で広告を隠して撮影（既定OFF）
-- 撮影前に不要な要素をクリックして一時的に隠す
-- ページ上部へ戻るボタンを撮影中だけ隠す
-- 右クリックメニューとキーボードショートカットから撮影
-- 全ページ撮影中の画面数表示とキャンセル
-- 出力前のプレビューと切り抜き・矢印・図形・文字・ぼかし・塗りつぶし・マーカー
-- 撮影失敗の原因と対処方法を履歴に表示
-- ファイル名の並び替えと、ページ全体の画像・PDFの分割保存
+1. Open `chrome://extensions` and enable Developer mode.
+2. Select **Load unpacked** and choose this folder.
+3. Open KiriTori from the Chrome toolbar.
 
-## インストール
+Capture the visible area, a selected region, a vertically scrolling page, or a scrollable area inside a page such as a table. For a scrollable area, select it on the page; KiriTori scrolls that area and stitches its visible width from top to bottom, then restores its original scroll position. Sticky headers inside the area appear only in the first frame to avoid repeating them. The whole area must fit in the viewport when selected. Horizontal overflow and scroll areas inside frames are not captured. Choose PNG, JPEG, or PDF; save under Downloads or copy to the clipboard. PDF is save-only.
 
-1. Chrome で `chrome://extensions` を開きます。
-2. 「デベロッパーモード」を有効にします。
-3. 「パッケージ化されていない拡張機能を読み込む」を選び、このフォルダーを指定します。
-4. Chrome ツールバーから KiriTori を開きます。
+Choose an immediate capture or a 3- or 5-second delay in the popup. The page and extension badge show the countdown; open the popup to cancel. Use the delay to open a page menu or tooltip. Region and element selection starts after the delay. The setting also applies to context-menu and shortcut captures and can be saved per site.
 
-## 保存先
+Choose paginated capture and select the page’s Next button. KiriTori captures each visible page as numbered PNG/JPEG files or a multipage PDF. Set a limit of 1–50 pages and a wait after each click. Capture stops when the button is disabled or hidden, a page repeats, or the page change or button cannot be verified; captured pages are saved. Increase the wait for slow pages. Keep the tab active and the viewport size unchanged. Cross-origin links, new tabs, and some site-specific navigation are not supported. The overall image-size limit applies. Copying and ad hiding are unavailable for this mode. With preview enabled, review pages one at a time or in a vertical list before saving. Editing is unavailable in this preview.
 
-拡張機能から指定できるのは Chrome の Downloads フォルダー配下の相対パスです。たとえば `Screenshots/Research` を指定すると、そのサブフォルダーに保存します。Downloads の実際の場所はChromeの設定で変更できます。
+The popup provides local editor drafts. Choose no saving or retention for 1, 7, or 30 days (default 7). Drafts contain the original image and edits; restore or delete individual drafts, or delete all drafts from the popup. Drafts remain after output until their expiry or deletion. Expired drafts are removed the next time KiriTori opens. Retention changes apply to subsequently opened editors.
 
-## ページ送りをしながら撮影
+The popup offers optional ad hiding, manual selection of elements to hide, and a preview editor. In the editor, choose **Text** and click the image to type. Use **Select and adjust** to move annotations; drag the white handle to resize text and the blue handle to rotate it. Confirm text with Enter before adjusting its handles. For pixelation, set the block size from 2 to 160 pixels before drawing; smaller values produce finer blocks. Pixelation may not fully conceal text, so review the result before sharing.
 
-「ページ送りをしながら撮影」を選び、ページ上の「次へ」ボタンをクリックします。表示中の範囲を撮影し、次へ進みます。PNG・JPEGはページごとの連番画像、PDFは複数ページとしてDownloads配下に保存します。撮影ページ数の上限（1〜50、初期値20）とページ送り後の待ち時間を設定でき、進捗画面からキャンセルできます。
+In a fresh capture preview, **Retake** captures the original tab again with the same settings. Re-select any region or manually hidden elements. The original tab must still be on the same page. A saved editing draft is retained; retaking is unavailable from a restored draft.
 
-ボタンが無効・非表示の場合や同じページに戻った場合は終了します。ボタンを特定できない場合やページの変化を確認できない場合も、それまでの画像を保存して理由を表示します。読み込みが遅い場合は待ち時間を延ばしてください。撮影時はタブとウィンドウの大きさを維持してください。別オリジンや新しいタブを開くリンク、サイト固有のページ遷移には対応しません。ボタンやページ内容の変化によっては最後まで撮影できない場合があります。画像の合計サイズ制限も適用されます。この撮影ではコピー・広告非表示は利用できません。プレビューをオンにすると、保存前に撮影結果を１枚ずつ、または縦に並べて確認できます。画像編集には対応していません。
+Choose a basic color or use the color picker for text and arrows. Save up to 12 custom colors locally for later use; remove a saved color with the adjacent × button. Select an existing annotation before choosing a color to change it.
 
-## 撮影前の待ち時間
+Use **Fill** and drag over an area to cover it with an opaque rectangle in the selected color. Use **Marker** to highlight with a translucent color; the content remains visible. Before sharing, check that every sensitive part is covered.
 
-「撮影前の待ち時間」で、待たずに撮影・3秒・5秒を選べます。待機中はページ上と拡張機能アイコンに残り秒数が表示され、アイコンを開くとキャンセルできます。メニューやツールチップを表示したい場合は、待機中にページ上で操作してください。範囲や非表示にする要素の選択は待機後に始まります。右クリックやショートカット、サイト別設定にも適用されます。
+Choose **Number marker** and click the image to place sequential numbered circles. Choose their color and size, then use Select and adjust to move, recolor, resize or delete them. The next number follows the highest existing number.
 
-## ファイル名と分割保存
+Drag to draw a **Rectangle**, **Ellipse**, or **Line** using the selected color and size. Use **Select and adjust** to move, recolor, or delete a shape; drag the white handle to resize a rectangle or ellipse, or drag either end of a line. Undo and redo are available via buttons or Cmd+Z / Cmd+Shift+Z on Mac and Ctrl+Z / Ctrl+Shift+Z or Ctrl+Y on Windows. Reset can also be undone.
 
-「ファイル名」から「ページ名_日時」「日時_サイト名_ページ名」「サイト名_日時_ページ名」を選べます。サイト名にはページのドメイン名、日時には撮影時のローカル時刻を使います。ファイル名に使えない文字は置き換え、長い名前は省略します。設定は右クリックやショートカットからの撮影にも適用されます。
+Choose an additional post-scroll wait: Fast (200 ms), Normal (600 ms), Slow (1500 ms), or a custom value from 0 to 10000 ms. The wait applies to page and scrollable-area capture, including context menu and shortcut capture. Scroll settling and Chrome capture limits can make the actual interval longer.
 
-撮影範囲が「ページ全体」または「スクロール領域」で、PNG・JPEG・PDFをファイルに保存する場合は、画面の高さごとの分割保存を選べます。ページ全体では撮影時の画面の高さ、スクロール領域では選択した領域の高さを基準に、編集後の画像を上から順に区切ります。PNG・JPEGは `_001`、`_002` のような連番の複数ファイル、PDFは1つの複数ページPDFになります。途中で区切られるため、文字や画像が分割位置にかかる場合があります。「保存してコピー」の場合、保存ファイルのみ分割し、クリップボードには編集後の画像全体をコピーします。コピーのみの出力には適用されません。
+Enable **Save settings for this site** to store capture options locally per hostname. They are used when reopening the popup and for shortcuts; context menu choices override only the capture mode. Uncheck to remove the site settings and return to the shared defaults. Subdomains are separate.
 
-スクロール撮影の上限は設定で1〜200画面に変更できます（初期値80）。上限に達すると、それまでの画像を出力します。分割は撮影・編集後に行うため、8,000万画素・一辺32,000ピクセルの制限は変わりません。
+Use the page context menu or the keyboard shortcut configured at `chrome://extensions/shortcuts` to capture with saved settings. The popup displays progress, cancellation, and up to ten recent capture failures.
 
-スクロール後の追加待機時間は「速い」（200ms）、「標準」（600ms）、「ゆっくり」（1500ms）またはカスタム（0〜10000ms）から選べます。ページ全体とスクロール領域に適用し、右クリックやショートカットでも設定を使います。スクロール位置の安定待ちやChromeの撮影回数制限により、実際の撮影間隔は設定値より長くなります。
+For full-page or scrollable-area PNG, JPEG, and PDF output, you can split the edited image by screen height. PNG and JPEG produce numbered files; PDF produces multiple pages. Set the capture limit from 1 to 200 screens (default 80); reaching it outputs the portion captured. The limits of 80 million pixels and 32,000 pixels on either side still apply, including when split output is selected. Some browser-internal pages and Chrome Web Store pages cannot be captured.
 
-## ページ内のスクロール領域を撮影
+## File names and storage
 
-ページ自体ではなく、表や一覧の内側だけがスクロールする場合は、撮影範囲で「スクロール領域を選択」を選び、ページ上で対象へカーソルを合わせてクリックします。青枠で対象を確認し、「この領域を撮影」を押すと、選んだ領域だけを上から下まで撮影して結合します。入れ子になったスクロール領域では、選択中に ↑ キーで親の領域、↓ キーで元の領域に戻せます。Escキーまたは「キャンセル」で中止します。
+Choose the order of the date, site name, and page title for file names. The site name is the domain and the timestamp uses local time. Files can be saved in a relative folder under Chrome's Downloads directory, such as `Screenshots/Research`. Change the location of Downloads in Chrome's settings.
 
-撮影中は選択した領域のスクロール位置を一時的に動かし、完了後やキャンセル時に元の位置へ戻します。ページそのものはスクロールしません。領域内の固定・追従ヘッダーは、最初の画面にだけ残して以降の重複を避けます。領域全体が画面内に収まる状態で選択してください。撮影するのは縦方向と現在表示中の横幅です。横スクロールで隠れている列、別フレーム内のスクロール領域、仮想化の方式によっては取得できない部分があります。
+## Advertising and unwanted elements
 
-## 広告を隠して撮影
+Ad hiding is off by default. When enabled, KiriTori temporarily hides elements identified by common ad labels, IDs, classes, and known advertising iframes, and restores them after capture. Detection may miss ads or hide other content. You can also select unwanted elements manually before capture; use the arrow keys to select parent or child elements, undo the last selection, and finish or cancel. Elements are restored after capture or cancellation. Hiding elements can change the page layout.
 
-「広告を隠して撮影」をONにすると、一般的な広告用ID・クラス、広告ラベル、既知の広告ネットワークiframeなどを撮影中だけ隠します。隠した要素は撮影後にページへ戻し、閲覧中のページには広告ブロックを適用しません。ページ固有の広告実装は判定できない場合があり、広告以外の要素を隠す可能性もあるため、初期設定はOFFです。
+## Failures and permissions
 
-「撮影前に隠す要素を選ぶ」をONにすると、撮影前にページ上の不要な要素をクリックして隠せます。複数選択でき、「直前を戻す」で選び直せます。ホバー中に↑キーで親要素、↓キーで元の要素を選べます。「選択完了」で撮影を続け、Escまたは「キャンセル」で中止します。選択した要素は撮影後やキャンセル時に復元します。要素を隠すとページの配置が変わる場合があります。iframe内の部品を個別に選べない場合は、iframe全体を選択できます。
+The popup keeps up to 10 recent capture failures locally, including the time, mode, stage, and an explanation when available. It does not store the page URL, title, screenshots, or raw error message in this history. You can clear it from the popup. If output fails partway through, some files or clipboard content may already have been created.
 
-## 編集下書きの復元
-
-撮影後の編集画面では、元画像と編集内容を端末内に一時保存します。ポップアップの「編集下書きの保存期間」で保存しない・1日・7日・30日を選べます（初期値7日）。期限切れは次にKiriToriを開いたときに削除します。保存された下書きはポップアップから復元・個別削除・一括削除できます。出力後も期限までは下書きが残ります。元画像には塗りつぶし前の内容が含まれるため、不要になったら削除してください。設定変更は次に開く編集画面から適用されます。
-
-## 撮影後のプレビューと編集
-
-「出力前にプレビュー・編集」は初期状態でONです。撮影後に別タブが開き、切り抜き、矢印、文字、ぼかし、塗りつぶし、マーカーを加えてから、選択した形式と出力先に保存・コピーできます。「元に戻す」「最初に戻す」も使えます。設定をOFFにすると従来どおり撮影後にすぐ出力します。
-
-プレビューの「撮り直す」で、撮影元のタブと同じ設定を使って再撮影できます。範囲選択や手動で隠す要素は再度選びます。元タブが閉じられた場合や別ページに移動した場合は撮り直せません。編集中の下書きは自動保存が有効なら残ります。復元した下書きからは撮り直せません。
-
-「番号マーカー」は画像をクリックするたびに1、2、3と追加します。色と大きさを選べ、「選択・調整」から移動・色変更・大きさ変更・削除できます。番号は既存の最大番号の次から振られ、元に戻す・やり直すにも対応します。
-
-「四角」「丸」「直線」はドラッグで描き、基本色やカラーパレット、上部の「大きさ」で色と線の太さを選べます。「選択・調整」で図形を選ぶと移動・色変更・削除ができ、四角と丸は白いハンドルで大きさ、直線は両端で長さや向きを調整できます。丸はドラッグ範囲に合わせた楕円として描きます。
-
-「元に戻す」「やり直す」で編集を前後できます。「最初に戻す」も元に戻せます。ショートカットはMacでは `⌘Z` / `⌘⇧Z`、Windowsでは `Ctrl+Z` / `Ctrl+Shift+Z` または `Ctrl+Y` です。文字入力中は入力欄の通常の操作が優先されます。
-
-文字を追加するときは「文字」を選び、画像上の入れたい位置をクリックして直接入力します。Enterキーか別の場所をクリックすると確定します。「選択・調整」で追加済みの文字をクリックして、画像上で内容を編集することもできます。入力中は文字の枠とハンドルを隠し、確定すると再表示します。空の文字を確定すると、追加済みの文字は削除されます。
-
-追加した矢印や文字は「選択・調整」を選んでクリックすると、ドラッグで移動でき、調整欄で大きさや向きを変更できます。矢印は長さを数値で変更でき、選択した両端をドラッグして長さや向きを調整することもできます。ドラッグ中は動かした先を点線で示し、ボタンを離したときに画像へ反映します。文字は内容も変更できます。選択した要素の削除と、調整後の「元に戻す」にも対応しています。選択枠やハンドルは出力画像には含まれません。
-
-選択中の文字に表示される白い丸をドラッグすると文字の大きさ、青い丸をドラッグすると向きを変更できます。青い丸は文字の中心を基準に回転します。キーボードでの操作や細かな調整には調整欄の数値も使えます。
-
-文字や矢印の色は基本色から選ぶか、カラーパレットで指定できます。「現在の色を登録」で最大12色を端末内に保存し、次回以降も選べます。登録した色の横の「×」で削除できます。追加済みの文字や矢印を「選択・調整」で選んでから色を選ぶと、その要素の色を変更できます。
-
-「塗りつぶし」は選んだ色の不透明な四角を画像に焼き込みます。隠したい情報全体を囲んでください。「マーカー」は同じようにドラッグして、選んだ色を半透明で重ねます。マーカーの下の内容は見えるため、情報を隠す用途には使えません。どちらも直後の操作なら「元に戻す」で取り消せます。
-
-選択を解除するには、調整欄の「選択解除」、Escキー、または画像上の要素がない場所をクリックします。要素自体は削除されません。
-
-ぼかしはモザイクとして画像に焼き込まれます。「ぼかし」を選ぶと粒度を2〜160ピクセルで指定でき、小さいほど粒が細かくなります。粒度は新しく描く範囲に適用されます。ぼかした文字が判別できる場合もあるため、共有前にプレビューで確認してください。塗りつぶしを使う場合も隠したい部分が完全に覆われていることを確認してください。編集処理と画像の受け渡しはブラウザー内で行います。編集タブを出力前に閉じると撮影をキャンセルします。
-
-## サイトごとの撮影設定
-
-ポップアップの「このサイトの設定を保存」をオンにすると、撮影範囲、形式、出力先、保存フォルダー、広告設定などを現在のホスト名ごとに端末内に保存します。次に同じサイトで開くと自動で読み込み、ショートカットにも適用されます。右クリックでは指定した撮影範囲を優先し、それ以外にサイト別設定を使います。チェックを外すとそのサイトの設定を削除し、共通設定に戻ります。設定のないサイトでは共通設定を使います。サブドメインは別のサイトとして扱います。
-
-## 右クリックとショートカット
-
-- Webページ上で右クリックし、「KiriTori」から表示中・範囲選択・ページ全体・スクロール領域を選べます。
-- `Ctrl+Shift+8`（Macは `Command+Shift+8`）で、ポップアップに保存した撮影設定を実行します。
-- キー割り当ては `chrome://extensions/shortcuts` で変更できます。ChromeやOSのショートカットと競合した場合は、別のキーに割り当ててください。
-- 右クリックメニューは撮影範囲だけを選び、形式・保存先・広告除去設定にはポップアップで保存した値を使います。
-
-全ページまたはスクロール領域の撮影中は、拡張機能アイコンに現在の画面数が表示されます。アイコンをクリックしてポップアップを開くと、進捗の確認とキャンセルができます。キャンセル後は処理中の画面を終えてから撮影を中止し、元のスクロール位置と一時的に隠した要素を復元します。出力が始まった後はキャンセルできません。
-
-## 撮影に失敗したとき
-
-拡張機能のアイコンをクリックすると、ポップアップ上部に最近の失敗履歴が表示されます。発生日時、撮影範囲、処理段階、分かる場合は撮影中の画面数と、原因・対処方法を確認できます。右クリックやショートカットからの失敗も記録します。ユーザーがキャンセルした撮影は失敗履歴に含みません。
-
-履歴は最大10件をChromeの端末内ストレージに保存し、ブラウザーの再起動後も確認できます。画像やページのURL・タイトル、エラーの原文は記録しません。「履歴を削除」で消せます。原因を特定できない失敗は一般的な対処方法を表示します。複数ファイルの保存中やコピー後に失敗した場合、一部の出力が残ることがあります。
-
-## 制限
-
-- Chrome の内部ページ、Chrome ウェブストアなど、拡張機能からページへアクセスできない画面は撮影できません。
-- ページ全体と選択したスクロール領域の撮影は縦方向です。横スクロールで隠れている部分は結合しません。
-- 長いページやスクロール領域は設定した画面数（最大200）までです。メモリー保護のため、合計8,000万画素、一辺32,000ピクセルまでです。
-- 固定・追従表示の要素は、全体撮影時の重複を避けるため一時的に隠します。
-- ページ上部へ戻るボタンは一般的な名前やラベルで判定するため、サイトによっては隠せない場合があります。
-- 広告判定は一般的なページ要素のラベルに基づくため、すべての広告を見つけるものではありません。
-- クリップボード画像はPNGとしてコピーします。PDFはファイル保存のみです。
-
-## 権限
-
-- `activeTab`: ユーザーが拡張機能を開いたタブだけを撮影します。
-- `scripting`: 選択範囲UIと、ページ全体・ページ内スクロール領域のスクロール制御に使います。
-- `downloads`: 指定したファイルをDownloads配下に保存します。
-- `offscreen`: 画面画像の結合・形式変換とクリップボード書き込みに使います。
-- `clipboardWrite`: ユーザーが選んだ場合にだけクリップボードへ書き込みます。
-- `contextMenus`: Webページの右クリックメニューに撮影項目を追加します。
-- `storage`: 撮影設定を端末内に保存し、ポップアップ・右クリック・ショートカットで共有します。
+- `activeTab`: access the tab on which the extension was invoked.
+- `scripting`: display selection controls and control scrolling on the page.
+- `downloads`: save output under Downloads.
+- `offscreen`: combine and convert images and write to the clipboard.
+- `clipboardWrite`: copy output when requested.
+- `contextMenus`: provide capture commands in the page context menu.
+- `storage`: store capture preferences and share them with the popup, context menu, and shortcuts.
