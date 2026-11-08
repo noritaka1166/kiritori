@@ -985,5 +985,8 @@
   },
   "m_1e247b2fb42a9afa": {
     "message": "The preview disconnected. Please capture again."
+  },
+  "extension_name": {
+    "message": "KiriTori — Screenshot & Annotate"
   }
 }

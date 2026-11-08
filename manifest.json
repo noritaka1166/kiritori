@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "KiriTori",
+  "name": "__MSG_extension_name__",
   "description": "__MSG_m_9cd713021a60161a__",
   "version": "0.2.20",
   "minimum_chrome_version": "116",

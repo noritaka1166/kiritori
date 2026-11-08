@@ -985,5 +985,8 @@
   },
   "m_1e247b2fb42a9afa": {
     "message": "预览连接已断开，请重新拍摄。"
+  },
+  "extension_name": {
+    "message": "KiriTori — 截图与标注"
   }
 }

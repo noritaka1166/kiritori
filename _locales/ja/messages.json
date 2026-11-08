@@ -985,5 +985,8 @@
   },
   "m_1e247b2fb42a9afa": {
     "message": "プレビューの接続が切れました。もう一度撮影してください。"
+  },
+  "extension_name": {
+    "message": "KiriTori — スクリーンショットの撮影と編集"
   }
 }

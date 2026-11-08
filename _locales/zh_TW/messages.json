@@ -985,5 +985,8 @@
   },
   "m_1e247b2fb42a9afa": {
     "message": "預覽連線已中斷，請重新擷取。"
+  },
+  "extension_name": {
+    "message": "KiriTori — 截圖與標註"
   }
 }
