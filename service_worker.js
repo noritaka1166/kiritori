@@ -405,14 +405,30 @@ async function handleCapture(options, targetTab, job) {
 
     if (options.mode === "pagination") {
       const page = await executeInTab(tab.id, readPageInfo);
+      const scope = ["viewport", "full", "scroll-area"].includes(options.paginationScope) ? options.paginationScope : "viewport";
+      const useBundle = scope !== "viewport";
+      let areaLocator = null;
+      if (scope === "scroll-area") {
+        reportCapture(job, { phase: "selecting", selectionKind: "scroll-area", cancellable: true });
+        const selected = await executeInTab(tab.id, selectScrollableArea, [job.id, {
+          label: kiriT("スクロール領域を選択"), instruction: kiriT("カーソルを合わせてクリックし、スクロール領域を選びます。↑キーで親の領域を選べます。"),
+          choose: kiriT("この領域を撮影"), cancel: kiriT("キャンセル"), empty: kiriT("縦スクロールできる領域を選んでください。")
+        }]);
+        if (!selected) { const error = new Error("撮影をキャンセルしました。"); error.name = "CaptureCancelled"; throw error; }
+        scrollAreaSelected = true;
+        throwIfCancelled(job);
+        areaLocator = await executeInTab(tab.id, getPaginationAreaLocator, [job.id]);
+        if (!areaLocator) throw new Error("スクロール領域がページ内から見つかりません。もう一度選択してください。");
+      }
       reportCapture(job, { phase: "selecting", selectionKind: "pagination", cancellable: true });
       const button = await executeInTab(tab.id, selectPaginationButton, [job.id, kiriT("ページ上の「次へ」ボタンを選んでください。"), kiriT("Escでキャンセル")]);
       if (!button) { const error = new Error("撮影をキャンセルしました。"); error.name = "CaptureCancelled"; throw error; }
       throwIfCancelled(job);
       meta = { ...page, mode: "pagination" };
       options.fileStem = makeFileStem(meta, options.filenamePattern);
-      await offscreenMessage({ type: "begin", meta, options });
+      await offscreenMessage({ type: useBundle ? "begin-pagination-bundle" : "begin", meta, options });
       job.offscreenStarted = true;
+      const timing = { last: 0 };
       const limit = Math.min(50, Math.max(1, Math.floor(Number(options.paginationLimit) || 20)));
       const waitMs = Math.min(10000, Math.max(500, Math.floor(Number(options.paginationWait) || 1500)));
       const seen = new Set();
@@ -424,15 +440,27 @@ async function handleCapture(options, targetTab, job) {
         if (seen.has(snapshot.signature)) { paginationWarning = kiriT("同じページが再表示されたため、そこで撮影を終了しました。"); stopped = true; break; }
         seen.add(snapshot.signature);
         reportCapture(job, { phase: "capturing", selectionKind: null, currentFrame: index + 1, cancellable: true });
-        if (lastFrameCapturedAt) await delay(Math.max(0, 510 - (Date.now() - lastFrameCapturedAt)));
-        throwIfCancelled(job);
-        const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
-        lastFrameCapturedAt = Date.now();
-        await assertTabStillActive(tab.id, tab.windowId);
-        throwIfCancelled(job);
         try {
-          await offscreenMessage({ type: "add-frame", image });
+          if (useBundle) {
+            if (scope === "scroll-area" && index > 0) {
+              const found = await executeInTab(tab.id, activatePaginationArea, [job.id, areaLocator]);
+              if (!found) { paginationWarning = kiriT("次のページでスクロール領域を特定できないため、そこで撮影を終了しました。"); stopped = true; break; }
+              scrollAreaSelected = true;
+            }
+            const complete = await capturePaginatedScroll(tab, job, scope, page, maxFrames, scrollWaitMs, timing);
+            if (scope === "scroll-area") scrollAreaSelected = false;
+            if (!complete) { paginationWarning = kiriT("スクロール撮影の上限に達したため、このページまでの撮影を終了しました。"); stopped = true; break; }
+          } else {
+            if (lastFrameCapturedAt) await delay(Math.max(0, 510 - (Date.now() - lastFrameCapturedAt)));
+            throwIfCancelled(job);
+            const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+            lastFrameCapturedAt = Date.now();
+            await assertTabStillActive(tab.id, tab.windowId);
+            throwIfCancelled(job);
+            await offscreenMessage({ type: "add-frame", image });
+          }
         } catch (error) {
+          if (useBundle) await offscreenMessage({ type: "abort-pagination-page" }).catch(() => undefined);
           if (index > 0 && /ページ画像が大きすぎます/.test(error?.message || "")) {
             paginationWarning = kiriT("画像サイズの上限に達したため、そこまでのページを保存しました。");
             stopped = true;
@@ -441,6 +469,7 @@ async function handleCapture(options, targetTab, job) {
           throw error;
         }
         if (index === limit - 1) break;
+        const beforeNext = useBundle ? await executeInTab(tab.id, paginationSnapshot) : snapshot;
         const click = await executeInTab(tab.id, clickPaginationButton, [button]);
         if (click === "end") { stopped = true; break; }
         if (click !== "clicked") { paginationWarning = kiriT("次へボタンを確認できないため、そこで撮影を終了しました。"); stopped = true; break; }
@@ -451,10 +480,10 @@ async function handleCapture(options, targetTab, job) {
           throwIfCancelled(job);
           await assertTabStillActive(tab.id, tab.windowId);
           try { next = await executeInTab(tab.id, paginationSnapshot); } catch (_) { next = null; }
-          if (next?.ready && next.signature !== snapshot.signature) break;
+          if (next?.ready && next.signature !== beforeNext.signature) break;
           await delay(250);
         }
-        if (!next?.ready || next.signature === snapshot.signature) { paginationWarning = kiriT("ページの変化を確認できないため、そこで撮影を終了しました。"); stopped = true; break; }
+        if (!next?.ready || next.signature === beforeNext.signature) { paginationWarning = kiriT("ページの変化を確認できないため、そこで撮影を終了しました。"); stopped = true; break; }
       }
       if (!stopped) paginationWarning = kiriT("$1ページの上限まで撮影しました。続きは含まれていません。", limit);
     } else if (options.mode === "full") {
@@ -646,7 +675,7 @@ async function handleCapture(options, targetTab, job) {
       }
       if (!edited.unchanged) await offscreenMessage({ type: "replace-image", url: edited.url });
     } finally {
-      await offscreenMessage({ type: "release", urls: [preview.url] }).catch(() => undefined);
+      await offscreenMessage({ type: "release", urls: preview.pages ? preview.pages.map(page => page.url) : [preview.url] }).catch(() => undefined);
     }
   }
   throwIfCancelled(job);
@@ -689,7 +718,7 @@ async function handleCapture(options, targetTab, job) {
 async function openCaptureEditor(job, options, previewUrl, meta, preview = null) {
   const choice = new Promise((resolve) => { job.editorResolve = resolve; });
   job.previewUrl = previewUrl;
-  job.previewPages = options.mode === "pagination" ? { width: preview.width, height: preview.height, pageHeight: preview.pageHeight, count: Math.ceil(preview.height / preview.pageHeight) } : null;
+  job.previewPages = options.mode === "pagination" ? (preview.pages ? { pages: preview.pages, count: preview.pages.length } : { width: preview.width, height: preview.height, pageHeight: preview.pageHeight, count: Math.ceil(preview.height / preview.pageHeight) }) : null;
   job.editorOptions = { ...options };
   job.editorMeta = meta;
   job.editorCommitted = false;
@@ -1406,6 +1435,98 @@ function selectScrollableArea(jobId, labels) {
       state.timer = setInterval(() => { try { state.port.postMessage({ type: "heartbeat" }); } catch (_) { state.cancel(); } }, 20_000);
     } catch (_) { state.cancel(); }
   });
+}
+
+function getPaginationAreaLocator(jobId) {
+  const el = window.__kiritoriScrollCapture?.jobId === jobId && window.__kiritoriScrollCapture.element;
+  if (!el?.isConnected) return null;
+  const parts = [];
+  for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
+    if (node.id && document.querySelectorAll(`#${CSS.escape(node.id)}`).length === 1) { parts.unshift(`#${CSS.escape(node.id)}`); break; }
+    let index = 1;
+    for (let sibling = node.previousElementSibling; sibling; sibling = sibling.previousElementSibling) if (sibling.tagName === node.tagName) index++;
+    parts.unshift(`${node.localName}:nth-of-type(${index})`);
+  }
+  const label = el.getAttribute("aria-label");
+  const fallback = label ? `${el.localName}[aria-label=${JSON.stringify(label)}]` : null;
+  return { selector: parts.join(" > "), fallback: fallback && document.querySelectorAll(fallback).length === 1 ? fallback : null, tag: el.localName, label, id: el.id || null, classes: [...el.classList] };
+}
+
+function activatePaginationArea(jobId, locator) {
+  let el;
+  const matches = element => element instanceof HTMLElement && element.localName === locator.tag && (!locator.id || element.id === locator.id) && (!locator.label || element.getAttribute("aria-label") === locator.label) && (locator.classes || []).every(name => element.classList.contains(name));
+  try {
+    el = document.querySelector(locator.selector);
+    if (!matches(el) && locator.fallback) {
+      const candidates = document.querySelectorAll(locator.fallback);
+      el = candidates.length === 1 ? candidates[0] : null;
+    }
+  } catch (_) { return false; }
+  if (!matches(el) || el.clientWidth < 40 || el.clientHeight < 40 || !["auto", "scroll", "overlay"].includes(getComputedStyle(el).overflowY)) return false;
+  const markerName = "data-kiritori-scroll-state";
+  const scrollBehavior = el.style.getPropertyValue("scroll-behavior");
+  const scrollPriority = el.style.getPropertyPriority("scroll-behavior");
+  const hadStyle = el.hasAttribute("style");
+  const originalTop = el.scrollTop, originalLeft = el.scrollLeft, previousMarker = el.getAttribute(markerName);
+  el.setAttribute(markerName, JSON.stringify({ owner: "kiritori", version: 1, originalTop, originalLeft, scrollBehavior, scrollPriority, hadStyle, previousMarker }));
+  el.style.setProperty("scroll-behavior", "auto", "important");
+  window.__kiritoriScrollCapture = { jobId, element: el, originalTop, originalLeft, scrollBehavior, scrollPriority, hadStyle, markerName };
+  el.scrollTop = 0;
+  return true;
+}
+
+async function capturePaginatedScroll(tab, job, scope, page, maxFrames, scrollWaitMs, timing) {
+  let prepared;
+  try {
+    if (scope === "full") {
+      prepared = await executeInTab(tab.id, prepareFullPage);
+    } else {
+      const area = await executeInTab(tab.id, readScrollableAreaMetrics, [job.id]);
+      if (!area || area.rect.x < 0 || area.rect.y < 0 || area.rect.x + area.rect.width > page.viewportWidth + 1 || area.rect.y + area.rect.height > page.viewportHeight + 1) throw new Error("スクロール領域全体が画面に表示されるようにしてから撮影してください。");
+      await executeInTab(tab.id, suppressScrollableAreaHover, [job.id]);
+      prepared = { ...page, scrollArea: area };
+    }
+    await offscreenMessage({ type: "begin-pagination-page", meta: { ...prepared, mode: scope } });
+    let targetY = 0, previousY = -1, completed = false;
+    for (let i = 0; i < maxFrames; i++) {
+      throwIfCancelled(job);
+      await assertTabStillActive(tab.id, tab.windowId);
+      const frame = await executeInTab(tab.id, scope === "full" ? scrollFullPage : scrollScrollableArea, scope === "full" ? [targetY] : [job.id, targetY]);
+      const actualY = scope === "full" ? frame?.scrollY : frame?.scrollTop;
+      if (!Number.isFinite(actualY) || (i > 0 && actualY <= previousY + 1)) throw new Error("ページを縦にスクロールできませんでした。表示範囲か選択範囲で撮影してください。");
+      if (scope === "scroll-area" && (frame.rect.x < 0 || frame.rect.y < 0 || frame.rect.x + frame.rect.width > page.viewportWidth + 1 || frame.rect.y + frame.rect.height > page.viewportHeight + 1)) throw new Error("スクロール領域全体が画面に表示されるようにしてから撮影してください。");
+      previousY = actualY;
+      await delay(Math.max(scrollWaitMs, timing.last ? 510 - (Date.now() - timing.last) : 0, 0));
+      throwIfCancelled(job);
+      await assertTabStillActive(tab.id, tab.windowId);
+      const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+      timing.last = Date.now();
+      await assertTabStillActive(tab.id, tab.windowId);
+      throwIfCancelled(job);
+      const metrics = await executeInTab(tab.id, scope === "full" ? readFullPageMetrics : readScrollableAreaMetrics, scope === "full" ? [] : [job.id]);
+      if (!metrics) throw new Error("スクロール領域がページ内から見つかりません。もう一度選択してください。");
+      await offscreenMessage({ type: "add-frame", image, scrollY: actualY, pageHeight: scope === "full" ? frame.pageHeight : frame.scrollHeight, currentPageHeight: scope === "full" ? metrics.pageHeight : metrics.scrollHeight, ...(scope === "scroll-area" ? { crop: frame.rect } : {}) });
+      if (scope === "scroll-area" && i === 0) await executeInTab(tab.id, hideScrollableAreaSticky, [job.id]);
+      let latest = metrics;
+      let height = scope === "full" ? latest.pageHeight : latest.scrollHeight;
+      let viewport = latest.viewportHeight || latest.clientHeight;
+      if (actualY >= Math.max(0, height - viewport) - 1) {
+        latest = await executeInTab(tab.id, scope === "full" ? waitForPageHeightStable : waitForScrollableAreaStable, scope === "full" ? [] : [job.id]);
+        throwIfCancelled(job);
+        if (!latest) throw new Error("スクロール領域がページ内から見つかりません。もう一度選択してください。");
+        height = scope === "full" ? latest.pageHeight : latest.scrollHeight;
+        viewport = latest.viewportHeight || latest.clientHeight;
+        if (actualY >= Math.max(0, height - viewport) - 1) { completed = true; break; }
+      }
+      targetY = Math.min(actualY + viewport, Math.max(0, height - viewport));
+      if (targetY <= actualY + 1) throw new Error("ページのスクロール位置を更新できませんでした。表示範囲か選択範囲で撮影してください。");
+    }
+    await offscreenMessage({ type: "trim-to-captured" });
+    await offscreenMessage({ type: "end-pagination-page" });
+    return completed;
+  } finally {
+    await executeInTab(tab.id, scope === "full" ? restoreFullPage : restoreScrollableArea, scope === "full" ? [] : [job.id]).catch(() => undefined);
+  }
 }
 
 function scrollScrollableArea(jobId, y) {

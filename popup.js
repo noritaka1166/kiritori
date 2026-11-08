@@ -43,6 +43,7 @@ const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
 const paginationSetting = document.querySelector("#pagination-setting");
 const paginationLimit = document.querySelector("#pagination-limit");
+const paginationScope = document.querySelector("#pagination-scope");
 const paginationWait = document.querySelector("#pagination-wait");
 const captureDelay = document.querySelector("#capture-delay");
 const destination = document.querySelector("#destination");
@@ -77,6 +78,7 @@ const defaults = {
   format: "png",
   captureDelay: 0,
   paginationLimit: 20,
+  paginationScope: "viewport",
   paginationWait: 1500,
   destination: "save",
   filenamePattern: "title-date",
@@ -233,6 +235,7 @@ function currentSettings() {
     mode: mode.value,
     format: format.value,
     captureDelay: Number(captureDelay.value),
+    paginationScope: paginationScope.value,
     paginationLimit: Math.min(50, Math.max(1, Math.floor(Number(paginationLimit.value) || 20))),
     paginationWait: Math.min(10000, Math.max(500, Math.floor(Number(paginationWait.value) || 1500))),
     destination: destination.value,
@@ -268,6 +271,7 @@ function applySettings(captureSettings) {
     if (["viewport", "region", "full", "scroll-area", "pagination"].includes(settings.mode)) mode.value = settings.mode;
     format.value = ["png", "jpeg", "pdf"].includes(settings.format) ? settings.format : "png";
     captureDelay.value = [0, 3, 5].includes(settings.captureDelay) ? String(settings.captureDelay) : "0";
+    paginationScope.value = ["viewport", "full", "scroll-area"].includes(settings.paginationScope) ? settings.paginationScope : "viewport";
     paginationLimit.value = Math.min(50, Math.max(1, Math.floor(Number(settings.paginationLimit) || 20)));
     paginationWait.value = Math.min(10000, Math.max(500, Math.floor(Number(settings.paginationWait) || 1500)));
     if (["save", "copy", "both"].includes(settings.destination)) destination.value = settings.destination;
@@ -326,8 +330,9 @@ function updateControls() {
   removeAds.disabled = isPagination;
   manualHide.disabled = isPagination;
   scrollAreaNote.hidden = mode.value !== "scroll-area";
-  frameLimitSetting.hidden = !["full", "scroll-area"].includes(mode.value);
-  scrollSpeedSetting.hidden = !["full", "scroll-area"].includes(mode.value);
+  const scrolling = ["full", "scroll-area"].includes(mode.value) || (isPagination && ["full", "scroll-area"].includes(paginationScope.value));
+  frameLimitSetting.hidden = !scrolling;
+  scrollSpeedSetting.hidden = !scrolling;
   scrollWaitCustom.hidden = scrollSpeed.value !== "custom";
   for (const option of destination.options) {
     if (option.value === "copy" || option.value === "both") {
@@ -343,6 +348,7 @@ mode.addEventListener("change", () => { updateControls(); saveSettings(); });
 format.addEventListener("change", () => { updateControls(); saveSettings(); });
 captureDelay.addEventListener("change", saveSettings);
 paginationLimit.addEventListener("change", saveSettings);
+paginationScope.addEventListener("change", () => { updateControls(); saveSettings(); });
 paginationWait.addEventListener("change", saveSettings);
 destination.addEventListener("change", () => { updateControls(); saveSettings(); });
 filenamePattern.addEventListener("change", saveSettings);

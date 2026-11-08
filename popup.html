@@ -62,7 +62,14 @@
       <p id="scroll-area-note" class="note" hidden>縦スクロールする表などの領域を撮影します。領域全体を画面内に表示して選んでください。横に隠れている部分は含みません。</p>
 
       <section id="pagination-setting" class="capture-setting" hidden>
-        <p class="note">最初に「次へ」ボタンを選びます。各ページの表示範囲を画像の連番または複数ページのPDFで保存します。コピー・広告非表示は利用できません。プレビューでは画像の編集はできません。</p>
+        <p class="note">各ページを画像の連番または複数ページのPDFで保存します。コピー・広告非表示は利用できません。プレビューでは画像の編集はできません。</p>
+        <label for="pagination-scope">各ページの撮影範囲</label>
+        <select id="pagination-scope">
+          <option value="viewport">表示中の範囲</option>
+          <option value="full">ページ全体をスクロール</option>
+          <option value="scroll-area">スクロール領域を選択</option>
+        </select>
+        <p class="note">スクロール領域は最初に選びます。ページが変わって領域を特定できなくなった場合は、そこまでの画像を出力します。</p>
         <label for="pagination-limit">撮影ページ数の上限</label>
         <input id="pagination-limit" type="number" min="1" max="50" value="20">
         <label for="pagination-wait">ページ送り後の待ち時間（ミリ秒）</label>

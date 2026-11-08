@@ -27,9 +27,10 @@ function render() {
     const figure = document.createElement("figure"); figure.className = "page";
     const caption = document.createElement("figcaption"); caption.textContent = kiriT("$1ページ目", index + 1);
     const viewport = document.createElement("div"); viewport.className = "page-window";
-    viewport.style.aspectRatio = `${data.pagination.width} / ${data.pagination.pageHeight}`;
-    const image = document.createElement("img"); image.src = data.url; image.alt = kiriT("$1ページ目", index + 1);
-    image.style.top = `${-index * 100}%`;
+    const page = data.pagination.pages?.[index];
+    viewport.style.aspectRatio = page ? `${page.width} / ${page.height}` : `${data.pagination.width} / ${data.pagination.pageHeight}`;
+    const image = document.createElement("img"); image.src = page ? page.url : data.url; image.alt = kiriT("$1ページ目", index + 1);
+    image.style.top = page ? "0" : `${-index * 100}%`;
     viewport.append(image); figure.append(caption, viewport); fragment.append(figure);
   }
   pages.replaceChildren(fragment);
@@ -91,7 +92,7 @@ async function initialize() {
   port.postMessage({ type: "hello", jobId });
   heartbeat = setInterval(() => { try { port.postMessage({ type: "heartbeat" }); } catch (_) {} }, 20_000);
   const response = await chrome.runtime.sendMessage({ type: "capture:editor:load", jobId });
-  if (!response?.ok || !response.pagination?.count || !response.pagination.pageHeight || !response.pagination.width) throw new Error(response?.error || kiriT("画像を読み込めませんでした。"));
+  if (!response?.ok || !response.pagination?.count || (!response.pagination.pages && (!response.pagination.pageHeight || !response.pagination.width))) throw new Error(response?.error || kiriT("画像を読み込めませんでした。"));
   const image = new Image(); image.src = response.url; await image.decode();
   if (terminal) return;
   data = response;

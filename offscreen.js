@@ -1,11 +1,39 @@
 let captureState;
+let paginationBundle;
 const liveObjectUrls = new Set();
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.target !== "offscreen") return false;
 
+  if (message.type === "begin-pagination-bundle") {
+    paginationBundle = { meta: message.meta, options: message.options, pages: [], pixelCount: 0 };
+    captureState = paginationBundle;
+    sendResponse({ ok: true });
+    return false;
+  }
+  if (message.type === "begin-pagination-page") {
+    if (!paginationBundle || captureState !== paginationBundle) { sendResponse({ ok: false, error: "画像処理の準備ができていません。" }); return false; }
+    captureState = { meta: message.meta, options: paginationBundle.options, canvas: null, context: null, scale: 1, coveredBottom: 0 };
+    sendResponse({ ok: true });
+    return false;
+  }
+  if (message.type === "end-pagination-page") {
+    if (!paginationBundle || !captureState?.canvas || captureState === paginationBundle) { sendResponse({ ok: false, error: "撮影画像がありません。" }); return false; }
+    paginationBundle.pages.push(captureState.canvas);
+    paginationBundle.pixelCount += captureState.canvas.width * captureState.canvas.height;
+    captureState = paginationBundle;
+    sendResponse({ ok: true });
+    return false;
+  }
+  if (message.type === "abort-pagination-page") {
+    if (paginationBundle) captureState = paginationBundle;
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message.type === "begin") {
     try {
+      paginationBundle = null;
       captureState = { meta: message.meta, options: message.options, canvas: null, context: null, scale: Number.isFinite(message.scale) && message.scale > 0 ? message.scale : 1, coveredBottom: 0 };
       sendResponse({ ok: true });
     } catch (error) {
@@ -16,6 +44,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "discard") {
     captureState = null;
+    paginationBundle = null;
     sendResponse({ ok: true });
     return false;
   }
@@ -45,6 +74,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "preview") {
     (async () => {
+      if (captureState === paginationBundle && paginationBundle?.pages.length) {
+        const pages = [];
+        try {
+          for (const page of paginationBundle.pages) pages.push({ url: makeObjectUrl(await canvasBlob(page, "image/png")), width: page.width, height: page.height });
+          return { url: pages[0].url, pages };
+        } catch (error) {
+          for (const page of pages) { if (liveObjectUrls.delete(page.url)) URL.revokeObjectURL(page.url); }
+          throw error;
+        }
+      }
       if (!captureState?.canvas) throw new Error("プレビューする画像がありません。");
       const { canvas, pageHeightPixels } = captureState;
       return { url: makeObjectUrl(await canvasBlob(canvas, "image/png")), width: canvas.width, height: canvas.height, pageHeight: pageHeightPixels || 0 };
@@ -210,7 +249,7 @@ async function addFrame(dataUrl, scrollY, pageHeight, currentPageHeight, crop) {
 
 function getSafeFullPageHeight(width, requestedHeight) {
   const height = Math.ceil(requestedHeight);
-  if (width * height > 80_000_000 || Math.max(width, height) > 32_000) {
+  if (width * height + (paginationBundle?.pixelCount || 0) > 80_000_000 || Math.max(width, height) > 32_000) {
     throw new Error("ページ画像が大きすぎます。表示範囲または選択範囲で撮影してください。");
   }
   return height;
@@ -230,6 +269,23 @@ function expandFullPageCanvas(requiredHeight) {
 }
 
 async function finishCapture() {
+  if (captureState === paginationBundle && paginationBundle?.pages.length) {
+    const { pages, options } = paginationBundle;
+    const files = [];
+    try {
+      if (options.format === "pdf") files.push({ suffix: ".pdf", url: makeObjectUrl(await makePdf(null, null, pages)) });
+      else {
+        const type = options.format === "png" ? "image/png" : "image/jpeg";
+        const extension = options.format === "png" ? ".png" : ".jpg";
+        for (let i = 0; i < pages.length; i++) files.push({ suffix: `_${String(i + 1).padStart(3, "0")}${extension}`, url: makeObjectUrl(await canvasBlob(pages[i], type, .92)) });
+      }
+    } catch (error) {
+      for (const file of files) if (liveObjectUrls.delete(file.url)) URL.revokeObjectURL(file.url);
+      throw error;
+    }
+    captureState = null; paginationBundle = null;
+    return { files, clipboard: null };
+  }
   if (!captureState?.canvas) throw new Error("撮影画像がありません。");
   const { canvas, meta, options, scale } = captureState;
   const split = meta.mode === "pagination" || (options.splitOutput === true && ["full", "scroll-area"].includes(meta.mode) && options.destination !== "copy");
@@ -290,8 +346,8 @@ async function copyToClipboard(clipboard) {
   ]);
 }
 
-async function makePdf(canvas, partHeight = canvas.height) {
-  const pageCount = Math.ceil(canvas.height / partHeight);
+async function makePdf(canvas, partHeight = canvas?.height, pages = null) {
+  const pageCount = pages ? pages.length : Math.ceil(canvas.height / partHeight);
   const encoder = new TextEncoder();
   const chunks = [];
   let offset = 0;
@@ -309,7 +365,7 @@ async function makePdf(canvas, partHeight = canvas.height) {
   const kids = Array.from({ length: pageCount }, (_, index) => `${3 + index * 3} 0 R`).join(" ");
   append(`2 0 obj\n<< /Type /Pages /Kids [${kids}] /Count ${pageCount} >>\nendobj\n`);
   for (let index = 0; index < pageCount; index += 1) {
-    const part = pageCount > 1 ? sliceCanvas(canvas, index * partHeight, partHeight) : canvas;
+    const part = pages ? pages[index] : pageCount > 1 ? sliceCanvas(canvas, index * partHeight, partHeight) : canvas;
     try {
       const jpeg = await canvasBlob(part, "image/jpeg", 0.94);
       const imageBytes = new Uint8Array(await jpeg.arrayBuffer());
@@ -330,7 +386,7 @@ async function makePdf(canvas, partHeight = canvas.height) {
       append(contentBytes);
       append("endstream\nendobj\n");
     } finally {
-      if (part !== canvas) { part.width = 0; part.height = 0; }
+      if (!pages && part !== canvas) { part.width = 0; part.height = 0; }
     }
   }
 

@@ -988,5 +988,20 @@
   },
   "extension_name": {
     "message": "KiriTori — Screenshot & Annotate"
+  },
+  "m_dd5adce2e401c673": {
+    "message": "Capture area on each page"
+  },
+  "m_f1ef3d63f7055e3c": {
+    "message": "Save each page as a numbered image or a multipage PDF. Copying, ad hiding and preview editing are unavailable."
+  },
+  "m_1552854d030ca659": {
+    "message": "Select the scrollable area first. If it cannot be identified after a page change, captured pages are saved."
+  },
+  "m_fa86f8c70f8b8d98": {
+    "message": "Capture stopped because the scrollable area could not be identified on the next page."
+  },
+  "m_9dd1124637cc989e": {
+    "message": "The scroll capture limit was reached; capture stopped on this page."
   }
 }
