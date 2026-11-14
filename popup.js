@@ -29,28 +29,53 @@ async function refreshDrafts() {
       const open = document.createElement("button"); open.type = "button"; open.textContent = kiriT("復元");
       open.addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL(`editor.html?draft=${encodeURIComponent(draft.id)}`) }));
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = kiriT("削除");
-      remove.addEventListener("click", async () => { try { await draftDb.delete(draft.id); await refreshDrafts(); } catch (_) { draftListStatus.textContent = kiriT("下書きを削除できませんでした。"); } });
+      remove.addEventListener("click", async () => {
+        try {
+          await draftDb.delete(draft.id);
+          await refreshDrafts();
+        } catch (error) {
+          console.error("下書きを削除できませんでした。", error);
+          draftListStatus.textContent = kiriT("下書きを削除できませんでした。");
+        }
+      });
       row.append(title, open, remove); draftList.append(row);
     }
-  } catch (_) { draftListStatus.textContent = kiriT("下書きを読み込めませんでした。"); }
+  } catch (error) {
+    console.error("下書きを読み込めませんでした。", error);
+    draftListStatus.textContent = kiriT("下書きを読み込めませんでした。");
+  }
 }
-(async () => {
-  try {
-    draftDb = (await import("./draft-store.js")).draftStore;
-    const settings = await chrome.storage.local.get("draftRetentionDays");
-    draftRetention.value = String([0, 1, 7, 30].includes(settings.draftRetentionDays) ? settings.draftRetentionDays : 7);
-    await refreshDrafts();
-  } catch (_) { draftListStatus.textContent = kiriT("下書きを読み込めませんでした。"); }
-})();
 draftRetention.addEventListener("change", async () => {
   try { await chrome.storage.local.set({ draftRetentionDays: Number(draftRetention.value) }); }
-  catch (_) { draftListStatus.textContent = kiriT("設定を保存できませんでした。"); }
+  catch (error) {
+    console.error("下書き設定を保存できませんでした。", error);
+    draftListStatus.textContent = kiriT("設定を保存できませんでした。");
+  }
 });
-draftClear.addEventListener("click", async () => { if (!draftDb) return; try { await draftDb.clear(); await refreshDrafts(); } catch (_) { draftListStatus.textContent = kiriT("下書きを削除できませんでした。"); } });
+draftClear.addEventListener("click", async () => {
+  if (!draftDb) {
+    return;
+  }
+  try {
+    await draftDb.clear();
+    await refreshDrafts();
+  } catch (error) {
+    console.error("下書きを削除できませんでした。", error);
+    draftListStatus.textContent = kiriT("下書きを削除できませんでした。");
+  }
+});
 const siteSettingsEnabled = document.querySelector("#site-settings-enabled");
 const siteSettingsStatus = document.querySelector("#site-settings-status");
 let siteHost = null;
-function siteKey(url) { try { const parsed = new URL(url); return ["http:", "https:"].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null; } catch (_) { return null; } }
+function siteKey(url) {
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null;
+  } catch (_) {
+    // 内部ページにはサイト別設定を適用しません。
+    return null;
+  }
+}
 const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
 const paginationSetting = document.querySelector("#pagination-setting");
@@ -75,7 +100,7 @@ const manualHide = document.querySelector("#manual-hide");
 const previewEdit = document.querySelector("#preview-edit");
 const folderRow = document.querySelector("#folder-row");
 const captureButton = document.querySelector("#capture");
-const status = document.querySelector("#status");
+const statusOutput = document.querySelector("#status");
 const progressPanel = document.querySelector("#capture-progress");
 const progressText = document.querySelector("#progress-text");
 const cancelCapture = document.querySelector("#cancel-capture");
@@ -138,8 +163,9 @@ async function refreshFailures() {
       item.append(meta, reason, advice);
       failureList.append(item);
     }
-  } catch (_) {
+  } catch (error) {
     if (request !== failureRequest) return;
+    console.error("失敗履歴を読み込めませんでした。", error);
     failureHistory.hidden = false;
     failureStatus.textContent = kiriT("失敗履歴を読み込めませんでした。拡張機能を再読み込みしてください。");
   }
@@ -149,9 +175,10 @@ clearFailures.addEventListener("click", async () => {
   clearFailures.disabled = true;
   try {
     const response = await chrome.runtime.sendMessage({ type: "capture:failures:clear" });
-    if (!response?.ok) throw new Error();
+    if (!response?.ok) throw new Error("失敗履歴を削除できませんでした。");
     await refreshFailures();
-  } catch (_) {
+  } catch (error) {
+    console.error("失敗履歴を削除できませんでした。", error);
     failureStatus.textContent = kiriT("失敗履歴を削除できませんでした。");
   } finally {
     clearFailures.disabled = false;
@@ -162,41 +189,69 @@ function updateCaptureButton() {
   captureButton.disabled = !settingsLoaded || captureBusy || startPending;
 }
 
-function renderCaptureStatus(captureStatus) {
+function acceptCaptureStatus(captureStatus) {
   if (captureStatus?.jobId && captureStatus.jobId !== latestJobId) {
     latestJobId = captureStatus.jobId;
     latestRevision = 0;
   }
-  if (captureStatus?.revision && captureStatus.revision < latestRevision) return;
+  if (captureStatus?.revision && captureStatus.revision < latestRevision) return false;
   if (captureStatus?.revision) latestRevision = captureStatus.revision;
+  return true;
+}
+
+function renderCaptureStatus(captureStatus) {
+  if (!acceptCaptureStatus(captureStatus)) return;
   captureBusy = Boolean(captureStatus?.active);
-  const showProgress = captureBusy && (["full", "scroll-area", "pagination"].includes(captureStatus.mode) || captureStatus.phase === "editing" || captureStatus.phase === "selecting" || captureStatus.phase === "countdown");
+  const showProgress = shouldShowCaptureProgress(captureStatus);
   progressPanel.hidden = !showProgress;
   if (showProgress) {
-    if (captureStatus.cancelRequested || captureStatus.phase === "cancelling") {
-      progressText.textContent = kiriT("撮影をキャンセルしています…");
-    } else if (captureStatus.phase === "countdown") {
-      progressText.textContent = kiriT("$1秒後に撮影を開始します…", captureStatus.countdownRemaining);
-    } else if (captureStatus.phase === "selecting") {
-      progressText.textContent = captureStatus.selectionKind === "pagination" ? kiriT("ページ上の「次へ」ボタンを選んでください。") : captureStatus.selectionKind === "scroll-area" ? kiriT("ページ内の表など、縦にスクロールする領域を選んでください。") : kiriT("ページ上で隠す要素を選び、「選択完了」を押してください。");
-    } else if (captureStatus.phase === "editing") {
-      progressText.textContent = kiriT("プレビュー画面で画像を確認・編集してください。");
-    } else if (captureStatus.phase === "processing") {
-      progressText.textContent = kiriT("$1画面を撮影し、画像をまとめています…", captureStatus.currentFrame);
-    } else if (captureStatus.phase === "saving") {
-      progressText.textContent = kiriT("撮影した画像を出力しています…");
-    } else if (captureStatus.currentFrame > 0) {
-      progressText.textContent = captureStatus.mode === "pagination" ? kiriT("現在$1ページ目を撮影中…", captureStatus.currentFrame) : kiriT("現在$1画面目を撮影中…", captureStatus.currentFrame);
-    } else {
-      progressText.textContent = kiriT("撮影を準備しています…");
-    }
-    cancelCapture.disabled = !captureStatus.cancellable || captureStatus.cancelRequested;
-    cancelCapture.textContent = captureStatus.cancelRequested ? kiriT("キャンセル中…") : kiriT("撮影をキャンセル");
-    openEditor.hidden = captureStatus.phase !== "editing" || !captureStatus.editorTabId;
-  } else if (captureStatus && !captureStatus.active && captureStatus.message) {
-    status.textContent = captureStatus.message;
+    renderProgressState(captureStatus);
+  } else {
+    renderInactiveCaptureStatus(captureStatus);
   }
   updateCaptureButton();
+}
+
+function shouldShowCaptureProgress(captureStatus) {
+  const progressModes = ["full", "scroll-area", "pagination"];
+  const progressPhases = ["editing", "selecting", "countdown"];
+  return captureBusy && (progressModes.includes(captureStatus.mode) || progressPhases.includes(captureStatus.phase));
+}
+
+function renderProgressState(captureStatus) {
+  progressText.textContent = getProgressMessage(captureStatus);
+  cancelCapture.disabled = !captureStatus.cancellable || captureStatus.cancelRequested;
+  cancelCapture.textContent = captureStatus.cancelRequested ? kiriT("キャンセル中…") : kiriT("撮影をキャンセル");
+  openEditor.hidden = captureStatus.phase !== "editing" || !captureStatus.editorTabId;
+}
+
+function getProgressMessage(captureStatus) {
+  if (captureStatus.cancelRequested || captureStatus.phase === "cancelling") return kiriT("撮影をキャンセルしています…");
+  if (captureStatus.phase === "countdown") return kiriT("$1秒後に撮影を開始します…", captureStatus.countdownRemaining);
+  if (captureStatus.phase === "selecting") return getSelectionMessage(captureStatus.selectionKind);
+  if (captureStatus.phase === "editing") return kiriT("プレビュー画面で画像を確認・編集してください。");
+  if (captureStatus.phase === "processing") return kiriT("$1画面を撮影し、画像をまとめています…", captureStatus.currentFrame);
+  if (captureStatus.phase === "saving") return kiriT("撮影した画像を出力しています…");
+  if (captureStatus.currentFrame > 0) return getFrameProgressMessage(captureStatus);
+  return kiriT("撮影を準備しています…");
+}
+
+function getSelectionMessage(selectionKind) {
+  const messages = {
+    pagination: "ページ上の「次へ」ボタンを選んでください。",
+    "scroll-area": "ページ内の表など、縦にスクロールする領域を選んでください。"
+  };
+  return kiriT(messages[selectionKind] || "ページ上で隠す要素を選び、「選択完了」を押してください。");
+}
+
+function getFrameProgressMessage(captureStatus) {
+  if (captureStatus.mode === "pagination") return kiriT("現在$1ページ目を撮影中…", captureStatus.currentFrame);
+  return kiriT("現在$1画面目を撮影中…", captureStatus.currentFrame);
+}
+
+function renderInactiveCaptureStatus(captureStatus) {
+  if (!captureStatus || captureStatus.active || !captureStatus.message) return;
+  statusOutput.textContent = captureStatus.message;
 }
 
 async function refreshCaptureStatus() {
@@ -208,25 +263,26 @@ async function refreshCaptureStatus() {
       if (!response.status && (latestJobId !== requestedJobId || latestRevision !== requestedRevision)) return;
       renderCaptureStatus(response.status);
     }
-  } catch (_) {
+  } catch (error) {
+    console.error("撮影状態を取得できませんでした。", error);
     captureBusy = false;
     progressPanel.hidden = true;
     updateCaptureButton();
-    status.textContent = kiriT("撮影状態を取得できませんでした。拡張機能を再読み込みしてください。");
+    statusOutput.textContent = kiriT("撮影状態を取得できませんでした。拡張機能を再読み込みしてください。");
   }
 }
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === "capture:progress") renderCaptureStatus(message.status);
-  if (message?.type === "capture:failures:changed") refreshFailures();
+  if (message?.type === "capture:failures:changed") void refreshFailures();
 });
 
 openEditor.addEventListener("click", async () => {
   try {
     const response = await chrome.runtime.sendMessage({ type: "capture:editor:focus" });
-    if (!response?.ok) status.textContent = kiriT(response?.error || "編集画面を開けませんでした。");
+    if (!response?.ok) statusOutput.textContent = kiriT(response?.error || "編集画面を開けませんでした。");
   } catch (error) {
-    status.textContent = kiriT(error?.message || "編集画面を開けませんでした。");
+    statusOutput.textContent = kiriT(error?.message || "編集画面を開けませんでした。");
   }
 });
 
@@ -235,9 +291,9 @@ cancelCapture.addEventListener("click", async () => {
   cancelCapture.textContent = kiriT("キャンセル中…");
   try {
     const response = await chrome.runtime.sendMessage({ type: "capture:cancel" });
-    if (!response?.ok) status.textContent = kiriT(response?.error || "キャンセルできませんでした。");
+    if (!response?.ok) statusOutput.textContent = kiriT(response?.error || "キャンセルできませんでした。");
   } catch (error) {
-    status.textContent = kiriT(error?.message || "キャンセルできませんでした。");
+    statusOutput.textContent = kiriT(error?.message || "キャンセルできませんでした。");
   }
   await refreshCaptureStatus();
 });
@@ -277,38 +333,66 @@ async function saveSettings() {
   await settingsWrite;
 }
 
+function persistSettingsFromControls() {
+  void saveSettings().catch((error) => {
+    console.error("設定を保存できませんでした。", error);
+    statusOutput.textContent = kiriT("設定を保存できませんでした。");
+  });
+}
+
 function applySettings(captureSettings) {
   if (captureSettings) {
-    const settings = { ...defaults, ...captureSettings };
-    if (["viewport", "region", "full", "scroll-area", "pagination"].includes(settings.mode)) mode.value = settings.mode;
-    format.value = ["png", "jpeg", "pdf"].includes(settings.format) ? settings.format : "png";
-    captureDelay.value = [0, 3, 5].includes(settings.captureDelay) ? String(settings.captureDelay) : "0";
-    paginationScope.value = ["viewport", "full", "scroll-area"].includes(settings.paginationScope) ? settings.paginationScope : "viewport";
-    paginationLimit.value = Math.min(50, Math.max(1, Math.floor(Number(settings.paginationLimit) || 20)));
-    paginationWait.value = Math.min(10000, Math.max(500, Math.floor(Number(settings.paginationWait) || 1500)));
-    if (["save", "copy", "both"].includes(settings.destination)) destination.value = settings.destination;
-    if (["title-date", "date-site-title", "site-date-title"].includes(settings.filenamePattern)) filenamePattern.value = settings.filenamePattern;
-    splitOutput.checked = settings.splitOutput === true;
-    maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(settings.maxFrames) || 80)));
-    if (["fast", "normal", "slow", "custom"].includes(settings.scrollSpeed)) scrollSpeed.value = settings.scrollSpeed;
-    scrollWaitInput.value = Math.min(10000, Math.max(0, Number.isFinite(Number(settings.scrollWaitMs)) ? Math.floor(Number(settings.scrollWaitMs)) : 600));
-    folder.value = settings.folder || defaults.folder;
-    removeAds.checked = settings.removeAds === true;
-    manualHide.checked = settings.manualHide === true;
-    previewEdit.checked = settings.preview !== false;
+    applySavedSettings(captureSettings);
   } else {
-    // 以前の版のポップアップ設定を引き継ぎます。
-    folder.value = localStorage.getItem("capture-folder") || defaults.folder;
-    removeAds.checked = localStorage.getItem("remove-ads") === "true";
+    applyLegacySettings();
   }
   updateControls();
+}
+
+function applySavedSettings(captureSettings) {
+  const settings = { ...defaults, ...captureSettings };
+  setSelectValueIfValid(mode, settings.mode, ["viewport", "region", "full", "scroll-area", "pagination"]);
+  format.value = selectValue(settings.format, ["png", "jpeg", "pdf"], defaults.format);
+  captureDelay.value = String(selectValue(settings.captureDelay, [0, 3, 5], defaults.captureDelay));
+  paginationScope.value = selectValue(settings.paginationScope, ["viewport", "full", "scroll-area"], defaults.paginationScope);
+  paginationLimit.value = Math.min(50, Math.max(1, Math.floor(Number(settings.paginationLimit) || 20)));
+  paginationWait.value = Math.min(10000, Math.max(500, Math.floor(Number(settings.paginationWait) || 1500)));
+  setSelectValueIfValid(destination, settings.destination, ["save", "copy", "both"]);
+  setSelectValueIfValid(filenamePattern, settings.filenamePattern, ["title-date", "date-site-title", "site-date-title"]);
+  splitOutput.checked = settings.splitOutput === true;
+  maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(settings.maxFrames) || 80)));
+  setSelectValueIfValid(scrollSpeed, settings.scrollSpeed, ["fast", "normal", "slow", "custom"]);
+  scrollWaitInput.value = normalizeScrollWait(settings.scrollWaitMs);
+  folder.value = settings.folder || defaults.folder;
+  removeAds.checked = settings.removeAds === true;
+  manualHide.checked = settings.manualHide === true;
+  previewEdit.checked = settings.preview !== false;
+}
+
+function selectValue(value, allowedValues, fallback) {
+  return allowedValues.includes(value) ? value : fallback;
+}
+
+function setSelectValueIfValid(select, value, allowedValues) {
+  if (allowedValues.includes(value)) select.value = value;
+}
+
+function normalizeScrollWait(value) {
+  const wait = Number(value);
+  return Math.min(10000, Math.max(0, Number.isFinite(wait) ? Math.floor(wait) : 600));
+}
+
+function applyLegacySettings() {
+  // 以前の版のポップアップ設定を引き継ぎます。
+  folder.value = localStorage.getItem("capture-folder") || defaults.folder;
+  removeAds.checked = localStorage.getItem("remove-ads") === "true";
 }
 
 async function loadSettings() {
   const [tabs, data] = await Promise.all([chrome.tabs.query({ active: true, lastFocusedWindow: true }), chrome.storage.local.get(["captureSettings", "siteCaptureSettings"])]);
   siteHost = siteKey(tabs[0]?.url);
   const profiles = data.siteCaptureSettings;
-  const hasProfile = Boolean(siteHost && profiles && Object.prototype.hasOwnProperty.call(profiles, siteHost));
+  const hasProfile = Boolean(siteHost && profiles && Object.hasOwn(profiles, siteHost));
   siteSettingsEnabled.disabled = !siteHost;
   siteSettingsEnabled.checked = hasProfile;
   siteSettingsStatus.textContent = siteHost ? kiriT("対象サイト: $1", siteHost) : kiriT("このページではサイト別設定を使えません。");
@@ -328,7 +412,10 @@ siteSettingsEnabled.addEventListener("change", async () => {
       await chrome.storage.local.set({ siteCaptureSettings: profiles });
       applySettings(data.captureSettings || defaults);
     }
-  } catch (_) { siteSettingsStatus.textContent = kiriT("サイト別設定を保存できませんでした。"); }
+  } catch (error) {
+    console.error("サイト別設定を保存できませんでした。", error);
+    siteSettingsStatus.textContent = kiriT("サイト別設定を保存できませんでした。");
+  }
   finally { siteSettingsEnabled.disabled = false; }
 });
 
@@ -356,36 +443,34 @@ function updateControls() {
   splitSetting.hidden = !["full", "scroll-area"].includes(mode.value) || destination.value === "copy";
 }
 
-mode.addEventListener("change", () => { updateControls(); saveSettings(); });
-format.addEventListener("change", () => { updateControls(); saveSettings(); });
-captureDelay.addEventListener("change", saveSettings);
-paginationLimit.addEventListener("change", saveSettings);
-paginationScope.addEventListener("change", () => { updateControls(); saveSettings(); });
-paginationWait.addEventListener("change", saveSettings);
-destination.addEventListener("change", () => { updateControls(); saveSettings(); });
-filenamePattern.addEventListener("change", saveSettings);
-splitOutput.addEventListener("change", saveSettings);
-scrollSpeed.addEventListener("change", () => { updateControls(); saveSettings(); });
-scrollWaitInput.addEventListener("change", () => { const value = scrollWaitInput.value === "" ? 600 : Number(scrollWaitInput.value); scrollWaitInput.value = Math.min(10000, Math.max(0, Number.isFinite(value) ? Math.floor(value) : 600)); saveSettings(); });
-maxFramesInput.addEventListener("change", () => { maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(maxFramesInput.value) || 80))); saveSettings(); });
-folder.addEventListener("change", saveSettings);
-removeAds.addEventListener("change", saveSettings);
-manualHide.addEventListener("change", saveSettings);
-previewEdit.addEventListener("change", saveSettings);
+mode.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
+format.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
+captureDelay.addEventListener("change", persistSettingsFromControls);
+paginationLimit.addEventListener("change", persistSettingsFromControls);
+paginationScope.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
+paginationWait.addEventListener("change", persistSettingsFromControls);
+destination.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
+filenamePattern.addEventListener("change", persistSettingsFromControls);
+splitOutput.addEventListener("change", persistSettingsFromControls);
+scrollSpeed.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
+scrollWaitInput.addEventListener("change", () => { const value = scrollWaitInput.value === "" ? 600 : Number(scrollWaitInput.value); scrollWaitInput.value = Math.min(10000, Math.max(0, Number.isFinite(value) ? Math.floor(value) : 600)); persistSettingsFromControls(); });
+maxFramesInput.addEventListener("change", () => { maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(maxFramesInput.value) || 80))); persistSettingsFromControls(); });
+folder.addEventListener("change", persistSettingsFromControls);
+removeAds.addEventListener("change", persistSettingsFromControls);
+manualHide.addEventListener("change", persistSettingsFromControls);
+previewEdit.addEventListener("change", persistSettingsFromControls);
 updateControls();
 const settingsReady = loadSettings()
   .catch(() => {
-    status.textContent = kiriT("設定を読み込めませんでした。拡張機能を再読み込みしてください。");
+    statusOutput.textContent = kiriT("設定を読み込めませんでした。拡張機能を再読み込みしてください。");
   })
   .finally(() => { settingsLoaded = true; updateCaptureButton(); });
-refreshCaptureStatus();
-refreshFailures();
 
 captureButton.addEventListener("click", async () => {
   startPending = true;
   captureBusy = true;
   updateCaptureButton();
-  status.textContent = ["full", "scroll-area"].includes(mode.value) ? kiriT("ページをスクロールしながら撮影しています…") : kiriT("撮影しています…");
+  statusOutput.textContent = ["full", "scroll-area"].includes(mode.value) ? kiriT("ページをスクロールしながら撮影しています…") : kiriT("撮影しています…");
 
   try {
     await settingsReady;
@@ -395,16 +480,28 @@ captureButton.addEventListener("click", async () => {
       options: currentSettings()
     });
     if (result?.cancelled) {
-      status.textContent = kiriT("撮影をキャンセルしました。");
+      statusOutput.textContent = kiriT("撮影をキャンセルしました。");
       return;
     }
     if (!result?.ok) throw new Error(result?.error || kiriT("撮影に失敗しました。"));
-    status.textContent = result.message;
+    statusOutput.textContent = result.message;
   } catch (error) {
-    status.textContent = kiriT(error?.message || "撮影に失敗しました。");
+    statusOutput.textContent = kiriT(error?.message || "撮影に失敗しました。");
   } finally {
     startPending = false;
     await refreshCaptureStatus();
     updateCaptureButton();
   }
 });
+
+try {
+  draftDb = (await import("./draft-store.js")).draftStore;
+  const draftSettings = await chrome.storage.local.get("draftRetentionDays");
+  draftRetention.value = String([0, 1, 7, 30].includes(draftSettings.draftRetentionDays) ? draftSettings.draftRetentionDays : 7);
+  await refreshDrafts();
+} catch (error) {
+  console.error("下書きを読み込めませんでした。", error);
+  draftListStatus.textContent = kiriT("下書きを読み込めませんでした。");
+}
+
+await Promise.all([refreshCaptureStatus(), refreshFailures()]);
