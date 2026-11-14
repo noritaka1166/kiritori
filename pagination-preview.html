@@ -14,18 +14,19 @@
   </header>
   <main>
     <div class="toolbar">
-      <div class="modes" role="group" aria-label="表示方法">
+      <fieldset class="modes">
+        <legend class="visually-hidden">表示方法</legend>
         <button id="single" type="button" aria-pressed="true">１枚ずつ</button>
         <button id="stacked" type="button" aria-pressed="false">縦に並べる</button>
-      </div>
+      </fieldset>
       <div id="pager" class="pager">
         <button id="previous" type="button" aria-label="前のページ">←</button>
         <span id="counter" aria-live="polite"></span>
         <button id="next" type="button" aria-label="次のページ">→</button>
       </div>
     </div>
-    <p id="status" role="status" aria-live="polite">画像を読み込んでいます…</p>
-    <p id="warning" class="warning" role="status" hidden></p>
+    <output id="status" aria-live="polite">画像を読み込んでいます…</output>
+    <output id="warning" class="warning" aria-live="polite" hidden></output>
     <div id="pages" class="pages"></div>
   </main>
   <script src="i18n.js"></script>
