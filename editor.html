@@ -18,7 +18,8 @@
     </header>
     <main>
       <section class="toolbar" aria-label="編集ツール">
-        <div class="tools" role="group" aria-label="ツール">
+        <fieldset class="tools">
+          <legend class="visually-hidden">ツール</legend>
           <button type="button" data-tool="select" aria-pressed="false">選択・調整</button>
           <button type="button" data-tool="crop" aria-pressed="true">切り抜き</button>
           <button type="button" data-tool="arrow" aria-pressed="false">矢印</button>
@@ -30,7 +31,7 @@
           <button type="button" data-tool="mosaic" aria-pressed="false">ぼかし</button>
           <button type="button" data-tool="redact" aria-pressed="false">塗りつぶし</button>
           <button type="button" data-tool="marker" aria-pressed="false">マーカー</button>
-        </div>
+        </fieldset>
         <label>大きさ <input id="size" type="number" min="12" max="160" value="36"></label>
         <label id="mosaic-block-label" hidden>モザイクの粒度（px） <input id="mosaic-block" type="number" min="2" max="160" step="1" value="12"></label>
         <button id="undo" type="button" disabled>元に戻す</button>
@@ -40,15 +41,19 @@
       <section class="palette" aria-label="色の設定">
         <div class="palette-row">
           <strong>基本色</strong>
-          <div id="preset-colors" class="swatches" role="group" aria-label="基本色"></div>
+          <fieldset id="preset-colors" class="swatches">
+            <legend class="visually-hidden">基本色</legend>
+          </fieldset>
           <label class="custom-picker">カラーパレット <input id="color" type="color" value="#e53935" aria-label="カラーパレット"></label>
           <button id="save-color" type="button" disabled>現在の色を登録</button>
         </div>
         <div id="saved-colors-row" class="palette-row" hidden>
           <strong>登録した色</strong>
-          <div id="saved-colors" class="swatches" role="group" aria-label="登録した色"></div>
+          <fieldset id="saved-colors" class="swatches">
+            <legend class="visually-hidden">登録した色</legend>
+          </fieldset>
         </div>
-        <p id="palette-status" class="palette-status" role="status" aria-live="polite"></p>
+        <output id="palette-status" class="palette-status" aria-live="polite"></output>
       </section>
       <section id="object-controls" class="object-controls" aria-label="選択した要素の調整" hidden>
         <strong id="object-label">選択中</strong>
@@ -59,8 +64,8 @@
         <button id="object-deselect" type="button">選択解除</button>
         <button id="object-delete" type="button">選択した要素を削除</button>
       </section>
-      <p id="draft-status" class="hint" role="status" aria-live="polite"></p>
-      <p id="hint" class="hint" role="status" aria-live="polite">画像を読み込んでいます…</p>
+      <output id="draft-status" class="hint" aria-live="polite"></output>
+      <output id="hint" class="hint" aria-live="polite">画像を読み込んでいます…</output>
       <div id="workspace" class="workspace">
         <div id="canvas-wrap" class="canvas-wrap">
           <canvas id="canvas" aria-label="撮影画像のプレビュー"></canvas>

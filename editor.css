@@ -16,6 +16,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #9bbfff; outline-
 .primary:hover { background: #1765cc; }
 main { max-width: 1280px; margin: auto; padding: 18px 24px 32px; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border: 1px solid #dfe4eb; border-radius: 12px; background: #fff; }
+.tools, .swatches { min-width: 0; margin: 0; padding: 0; border: 0; }
 .tools { display: flex; flex-wrap: wrap; gap: 6px; }
 .tools button[aria-pressed="true"] { color: #174ea6; border-color: #1a73e8; background: #e8f0fe; font-weight: 650; }
 .toolbar label { display: inline-flex; align-items: center; gap: 5px; color: #536071; font-size: 13px; }
@@ -44,6 +45,7 @@ main { max-width: 1280px; margin: auto; padding: 18px 24px 32px; }
 .object-controls label { display: inline-flex; align-items: center; gap: 5px; color: #536071; font-size: 13px; }
 .object-controls input { width: 80px; height: 34px; border: 1px solid #ccd3dd; border-radius: 6px; padding: 4px 6px; }
 .object-controls .object-text input { width: 210px; }
+.hint { display: block; margin: 1em 0; }
 .hint, .privacy-note { color: #536071; font-size: 13px; line-height: 1.5; }
 .workspace { min-height: 180px; overflow: auto; padding: 20px; border: 1px solid #dfe4eb; border-radius: 12px; background: #e8ebf0; }
 .canvas-wrap { position: relative; max-width: 100%; margin: 0 auto; line-height: 0; }
@@ -54,4 +56,5 @@ svg { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; overf
 #text-rotate-handle { cursor: grab; }
 #text-rotate-handle:active { cursor: grabbing; }
 [hidden] { display: none !important; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 650px) { .header { padding: 12px; } main { padding: 12px; } .header span { display: block; margin: 2px 0 0; } .workspace { padding: 8px; } }
