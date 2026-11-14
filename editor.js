@@ -54,7 +54,7 @@ let draftClosed = false;
 let draftRevision = 0;
 function saveDraft() {
   if (!draftDb || !draftData || draftClosed || !history.length) return;
-  const savedHistory = JSON.parse(JSON.stringify(history));
+  const savedHistory = structuredClone(history);
   if (inlineEdit) {
     const value = inlineText.value.trim().slice(0, 200);
     const operations = savedHistory[savedHistory.length - 1].operations;
@@ -63,7 +63,7 @@ function saveDraft() {
   }
   const revision = ++draftRevision;
   draftStatus.textContent = kiriT("下書きを保存中…");
-  const update = chrome.runtime.sendMessage({ type: "draft:update", id: draftData.id, history: savedHistory, redoStack: JSON.parse(JSON.stringify(redoStack)), retentionDays: draftData.retentionDays }).then((response) => { if (!response?.ok) throw new Error("Draft update failed"); });
+  const update = chrome.runtime.sendMessage({ type: "draft:update", id: draftData.id, history: savedHistory, redoStack: structuredClone(redoStack), retentionDays: draftData.retentionDays }).then((response) => { if (!response?.ok) throw new Error("Draft update failed"); });
   draftWrite = Promise.all([draftWrite.catch(() => undefined), update]).then(() => undefined);
   draftWrite.then(() => { if (revision === draftRevision) draftStatus.textContent = kiriT("下書きを保存しました。"); }).catch(() => { if (revision === draftRevision) draftStatus.textContent = kiriT("下書きを保存できませんでした。"); });
 }
@@ -150,7 +150,9 @@ function renderPalette() {
     remove.setAttribute("aria-label", kiriT("登録色 $1 を削除", color));
     remove.title = kiriT("登録色 $1 を削除", color);
     remove.disabled = paletteDisabled || !paletteReady || paletteSaving;
-    remove.addEventListener("click", () => persistPalette(savedColors.filter((value) => value !== color), "登録した色を削除しました。"));
+    remove.addEventListener("click", () => {
+      void persistPalette(savedColors.filter((value) => value !== color), "登録した色を削除しました。").catch(reportPaletteFailure);
+    });
     wrapper.append(makeSwatch(color, color), remove);
     savedColorsElement.append(wrapper);
   }
@@ -169,12 +171,17 @@ async function persistPalette(next, successMessage) {
     await chrome.storage.local.set({ [paletteStorageKey]: next });
     if (paletteRevision === revision) savedColors = normalizedColors(next);
     paletteStatus.textContent = kiriT(successMessage);
-  } catch (_) {
-    paletteStatus.textContent = kiriT("登録色を保存できませんでした。");
+  } catch (error) {
+    reportPaletteFailure(error);
   } finally {
     paletteSaving = false;
     renderPalette();
   }
+}
+
+function reportPaletteFailure(error) {
+  console.error("Failed to save custom annotation colors.", error);
+  paletteStatus.textContent = kiriT("登録色を保存できませんでした。");
 }
 
 saveColorButton.addEventListener("click", () => {
@@ -182,7 +189,7 @@ saveColorButton.addEventListener("click", () => {
   const color = colorInput.value.toLowerCase();
   if (savedColors.includes(color)) { paletteStatus.textContent = kiriT("この色は既に登録されています。"); return; }
   if (savedColors.length >= maxSavedColors) { paletteStatus.textContent = kiriT("登録色は最大12色です。"); return; }
-  persistPalette([...savedColors, color], "色を登録しました。");
+  void persistPalette([...savedColors, color], "色を登録しました。").catch(reportPaletteFailure);
 });
 colorInput.addEventListener("input", syncPalette);
 colorInput.addEventListener("change", () => applyColor(colorInput.value));
@@ -194,13 +201,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 renderPalette();
 const initialPaletteRevision = paletteRevision;
-chrome.storage.local.get(paletteStorageKey).then((data) => {
-  if (initialPaletteRevision === paletteRevision) savedColors = normalizedColors(data[paletteStorageKey]);
-  paletteReady = true;
-  renderPalette();
-}).catch(() => {
-  paletteStatus.textContent = kiriT("登録色を読み込めませんでした。");
-});
+async function loadInitialPalette() {
+  try {
+    const data = await chrome.storage.local.get(paletteStorageKey);
+    if (initialPaletteRevision === paletteRevision) savedColors = normalizedColors(data[paletteStorageKey]);
+    paletteReady = true;
+    renderPalette();
+  } catch (error) {
+    console.error("Failed to load custom annotation colors.", error);
+    paletteStatus.textContent = kiriT("登録色を読み込めませんでした。");
+  }
+}
 
 const labels = {
   select: kiriT("文字や図形を選んで移動・調整できます。白い丸で大きさ、直線は両端を調整できます。"),
@@ -217,7 +228,7 @@ const labels = {
 };
 
 function currentState() { return history[history.length - 1]; }
-function cloneState() { return JSON.parse(JSON.stringify(currentState())); }
+function cloneState() { return structuredClone(currentState()); }
 
 function selectTool(next) {
   if (inlineEdit) finishInlineText();
@@ -238,6 +249,32 @@ function updateButtons() {
   resetButton.disabled = history.length < 2 || submitted || JSON.stringify(currentState()) === JSON.stringify(history[0]);
 }
 
+function drawOperation(operation, crop) {
+  switch (operation.type) {
+    case "arrow":
+      drawArrow(operation, crop);
+      break;
+    case "line":
+    case "rect":
+    case "ellipse":
+      drawShape(operation, crop);
+      break;
+    case "text":
+      drawText(operation, crop);
+      break;
+    case "number":
+      drawNumberMarker(operation, crop);
+      break;
+    case "mosaic":
+      drawMosaic(operation, crop);
+      break;
+    case "redact":
+    case "marker":
+      drawFilledRectangle(operation, crop);
+      break;
+  }
+}
+
 function render(state = currentState(), excludedIndex = null) {
   const crop = state.crop;
   if (canvas.width !== crop.width) canvas.width = crop.width;
@@ -248,12 +285,7 @@ function render(state = currentState(), excludedIndex = null) {
 
   for (const [index, operation] of state.operations.entries()) {
     if (index === excludedIndex) continue;
-    if (operation.type === "arrow") drawArrow(operation, crop);
-    if (["line", "rect", "ellipse"].includes(operation.type)) drawShape(operation, crop);
-    if (operation.type === "text") drawText(operation, crop);
-    if (operation.type === "number") drawNumberMarker(operation, crop);
-    if (operation.type === "mosaic") drawMosaic(operation, crop);
-    if (operation.type === "redact" || operation.type === "marker") drawFilledRectangle(operation, crop);
+    drawOperation(operation, crop);
   }
   renderObjectSelection(state);
   updateButtons();
@@ -297,7 +329,7 @@ function drawShape(item, crop) {
 
 function drawNumberMarker(item, crop) {
   const radius = item.size / 2;
-  const rgb = item.color.match(/[0-9a-f]{2}/gi).map(value => parseInt(value, 16));
+  const rgb = item.color.match(/[0-9a-f]{2}/gi).map(value => Number.parseInt(value, 16));
   const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
   context.save(); context.fillStyle = item.color; context.beginPath();
   context.arc(item.x - crop.x, item.y - crop.y, radius, 0, Math.PI * 2); context.fill();
@@ -364,6 +396,34 @@ function startInlineText(item, index = null) {
   hint.textContent = kiriT("画像の上で入力できます。Enterまたは別の場所をクリックすると確定します。");
 }
 
+function addInlineText(edit, value, next) {
+  if (!value) return;
+  next.operations.push({ ...edit.item, text: value });
+  selectTool("select");
+  selectedIndex = next.operations.length - 1;
+  addState(next);
+}
+
+function updateExistingInlineText(edit, value, next) {
+  const item = next.operations[edit.index];
+  if (item?.type !== "text") {
+    render();
+    return false;
+  }
+  if (!value) {
+    next.operations.splice(edit.index, 1);
+    if (selectedIndex === edit.index) selectedIndex = null;
+    else if (selectedIndex !== null && selectedIndex > edit.index) selectedIndex -= 1;
+    addState(next);
+  } else if (value !== item.text) {
+    item.text = value;
+    addState(next);
+  } else {
+    render();
+  }
+  return true;
+}
+
 function finishInlineText() {
   if (!inlineEdit) return;
   const edit = inlineEdit;
@@ -372,34 +432,16 @@ function finishInlineText() {
   inlineText.hidden = true;
   if (!sourceImage || submitted || terminal) return;
   const next = cloneState();
-  if (edit.index === null) {
-    if (!value) { hint.textContent = labels[tool]; return; }
-    next.operations.push({ ...edit.item, text: value });
-    selectTool("select");
-    selectedIndex = next.operations.length - 1;
-    addState(next);
-  } else {
-    const item = next.operations[edit.index];
-    if (!item || item.type !== "text") { render(); return; }
-    if (!value) {
-      next.operations.splice(edit.index, 1);
-      if (selectedIndex === edit.index) selectedIndex = null;
-      else if (selectedIndex !== null && selectedIndex > edit.index) selectedIndex -= 1;
-      addState(next);
-    } else if (value !== item.text) {
-      item.text = value;
-      addState(next);
-    } else {
-      render();
-    }
-  }
-  hint.textContent = labels[tool];
+  let shouldUpdateHint = true;
+  if (edit.index === null) addInlineText(edit, value, next);
+  else shouldUpdateHint = updateExistingInlineText(edit, value, next);
+  if (shouldUpdateHint) hint.textContent = labels[tool];
 }
 
 inlineText.addEventListener("input", () => { positionInlineText(); saveDraft(); });
 inlineText.addEventListener("blur", finishInlineText);
 inlineText.addEventListener("keydown", (event) => {
-  if (event.isComposing || event.keyCode === 229) return;
+  if (event.isComposing || event.key === "Process") return;
   if (event.key !== "Enter" && event.key !== "Escape") return;
   event.preventDefault();
   event.stopPropagation();
@@ -421,50 +463,99 @@ function distanceToSegment(point, item) {
   return Math.hypot(point.x - (item.x1 + t * dx), point.y - (item.y1 + t * dy));
 }
 
+const blockedObjectHit = Symbol("blocked object hit");
+
+function hitNumber(point, item, radius) {
+  return Math.hypot(point.x - item.x, point.y - item.y) <= item.size / 2 + radius / 2;
+}
+
+function hitRedaction(point, item) {
+  const inside = point.x >= item.x && point.x <= item.x + item.width
+    && point.y >= item.y && point.y <= item.y + item.height;
+  return inside ? blockedObjectHit : false;
+}
+
+function hitLine(point, item, radius) {
+  return distanceToSegment(point, item) <= Math.max(radius, item.size * .3);
+}
+
+function hitRectangle(point, item, radius) {
+  const dx = Math.min(Math.abs(point.x - item.x), Math.abs(point.x - item.x - item.width));
+  const dy = Math.min(Math.abs(point.y - item.y), Math.abs(point.y - item.y - item.height));
+  const insideBounds = point.x >= item.x - radius && point.x <= item.x + item.width + radius
+    && point.y >= item.y - radius && point.y <= item.y + item.height + radius;
+  return insideBounds && (dx <= radius || dy <= radius);
+}
+
+function hitEllipse(point, item, radius) {
+  const rx = item.width / 2, ry = item.height / 2;
+  const normalized = Math.hypot((point.x - item.x - rx) / rx, (point.y - item.y - ry) / ry);
+  return Math.abs(normalized - 1) * Math.min(rx, ry) <= radius;
+}
+
+function hitText(point, item, radius) {
+  const angle = -(item.angle || 0) * Math.PI / 180;
+  const dx = point.x - item.x, dy = point.y - item.y;
+  const x = dx * Math.cos(angle) - dy * Math.sin(angle);
+  const y = dx * Math.sin(angle) + dy * Math.cos(angle);
+  const box = textBounds(item);
+  return x >= -radius / 2 && x <= box.width + radius / 2
+    && y >= -radius / 2 && y <= box.height + radius / 2;
+}
+
+const objectHitTests = {
+  number: hitNumber,
+  redact: hitRedaction,
+  arrow: hitLine,
+  line: hitLine,
+  rect: hitRectangle,
+  ellipse: hitEllipse,
+  text: hitText
+};
+
 function hitObject(point, state) {
   const radius = hitRadius();
   for (let index = state.operations.length - 1; index >= 0; index -= 1) {
     const item = state.operations[index];
-    if (item.type === "number" && Math.hypot(point.x - item.x, point.y - item.y) <= item.size / 2 + radius / 2) return index;
-    if (item.type === "redact" && point.x >= item.x && point.x <= item.x + item.width && point.y >= item.y && point.y <= item.y + item.height) return null;
-    if (["arrow", "line"].includes(item.type) && distanceToSegment(point, item) <= Math.max(radius, item.size * .3)) return index;
-    if (item.type === "rect") {
-      const dx = Math.min(Math.abs(point.x - item.x), Math.abs(point.x - item.x - item.width));
-      const dy = Math.min(Math.abs(point.y - item.y), Math.abs(point.y - item.y - item.height));
-      if (point.x >= item.x - radius && point.x <= item.x + item.width + radius && point.y >= item.y - radius && point.y <= item.y + item.height + radius && (dx <= radius || dy <= radius)) return index;
-    }
-    if (item.type === "ellipse") {
-      const rx = item.width / 2, ry = item.height / 2;
-      const normalized = Math.hypot((point.x - item.x - rx) / rx, (point.y - item.y - ry) / ry);
-      if (Math.abs(normalized - 1) * Math.min(rx, ry) <= radius) return index;
-    }
-    if (item.type === "text") {
-      const angle = -(item.angle || 0) * Math.PI / 180;
-      const dx = point.x - item.x, dy = point.y - item.y;
-      const x = dx * Math.cos(angle) - dy * Math.sin(angle);
-      const y = dx * Math.sin(angle) + dy * Math.cos(angle);
-      const box = textBounds(item);
-      if (x >= -radius / 2 && x <= box.width + radius / 2 && y >= -radius / 2 && y <= box.height + radius / 2) return index;
-    }
+    const hitTest = objectHitTests[item.type];
+    const result = hitTest?.(point, item, radius);
+    if (result === blockedObjectHit) return null;
+    if (result) return index;
   }
   return null;
 }
 
 function hideObjectSelection() {
   objectSelection.setAttribute("visibility", "hidden");
-  for (const shape of [objectLine, objectStart, objectEnd, objectBox, textResizeHandle, textRotateHandle, textRotateLine]) shape.setAttribute("visibility", "hidden");
+  setVisibility([objectLine, objectStart, objectEnd, objectBox, textResizeHandle, textRotateHandle, textRotateLine], "hidden");
 }
 
-function renderObjectSelection(state) {
-  if (inlineEdit) { hideObjectSelection(); return; }
-  const item = tool === "select" && selectedIndex !== null ? state.operations[selectedIndex] : null;
-  if (!item || !["text", "arrow", "line", "rect", "ellipse", "number"].includes(item.type)) {
-    hideObjectSelection();
-    objectControls.hidden = true;
-    return;
-  }
-  objectControls.hidden = false;
-  objectLabel.textContent = ({ arrow: kiriT("矢印を調整"), text: kiriT("文字を調整"), line: kiriT("直線を調整"), rect: kiriT("四角を調整"), ellipse: kiriT("丸を調整"), number: kiriT("番号マーカーを調整") })[item.type];
+function setVisibility(elements, visibility) {
+  for (const element of elements) element.setAttribute("visibility", visibility);
+}
+
+function setAttributes(element, attributes) {
+  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+}
+
+const selectableObjectTypes = new Set(["text", "arrow", "line", "rect", "ellipse", "number"]);
+const objectControlLabels = {
+  arrow: kiriT("矢印を調整"),
+  text: kiriT("文字を調整"),
+  line: kiriT("直線を調整"),
+  rect: kiriT("四角を調整"),
+  ellipse: kiriT("丸を調整"),
+  number: kiriT("番号マーカーを調整")
+};
+
+function selectedObject(state) {
+  if (tool !== "select" || selectedIndex === null) return null;
+  const item = state.operations[selectedIndex];
+  return selectableObjectTypes.has(item?.type) ? item : null;
+}
+
+function updateObjectControls(item) {
+  objectLabel.textContent = objectControlLabels[item.type];
   if (colorInput.value.toLowerCase() !== item.color.toLowerCase()) {
     colorInput.value = item.color;
     syncPalette();
@@ -478,55 +569,99 @@ function renderObjectSelection(state) {
   objectTextLabel.hidden = item.type !== "text";
   objectLength.value = isLine ? Math.round(Math.hypot(item.x2 - item.x1, item.y2 - item.y1)) : "";
   objectText.value = item.type === "text" ? item.text : "";
+}
+
+function renderLineSelection(item, crop, radius) {
+  setVisibility([objectBox, textResizeHandle, textRotateHandle, textRotateLine], "hidden");
+  setVisibility([objectLine, objectStart, objectEnd], "visible");
+  setAttributes(objectLine, { x1: item.x1 - crop.x, y1: item.y1 - crop.y, x2: item.x2 - crop.x, y2: item.y2 - crop.y });
+  for (const [circle, x, y] of [[objectStart, item.x1, item.y1], [objectEnd, item.x2, item.y2]]) {
+    setAttributes(circle, { cx: x - crop.x, cy: y - crop.y, r: radius });
+  }
+}
+
+function renderTextSelection(item, crop, radius) {
+  setVisibility([objectLine, objectStart, objectEnd], "hidden");
+  objectBox.setAttribute("visibility", "visible");
+  const box = textBounds(item);
+  setAttributes(objectBox, {
+    x: 0,
+    y: 0,
+    width: box.width,
+    height: box.height,
+    transform: `translate(${item.x - crop.x} ${item.y - crop.y}) rotate(${item.angle || 0})`
+  });
+  const corner = textPoint(item, box.width, box.height);
+  let origin = textPoint(item, box.width / 2, 0);
+  let rotate = textPoint(item, box.width / 2, -radius * 4);
+  const rotateBelow = drag?.handle === "text-rotate" ? drag.rotateBelow : rotate.y < crop.y;
+  if (rotateBelow) {
+    origin = textPoint(item, box.width / 2, box.height);
+    rotate = textPoint(item, box.width / 2, box.height + radius * 4);
+  }
+  for (const [circle, location] of [[textResizeHandle, corner], [textRotateHandle, rotate]]) {
+    setAttributes(circle, { cx: location.x - crop.x, cy: location.y - crop.y, r: radius, visibility: "visible" });
+  }
+  setAttributes(textRotateLine, {
+    x1: origin.x - crop.x,
+    y1: origin.y - crop.y,
+    x2: rotate.x - crop.x,
+    y2: rotate.y - crop.y,
+    visibility: "visible"
+  });
+}
+
+function renderNumberSelection(item, crop) {
+  setVisibility([objectLine, objectStart, objectEnd, textResizeHandle, textRotateHandle, textRotateLine], "hidden");
+  objectBox.setAttribute("visibility", "visible");
+  setAttributes(objectBox, {
+    x: item.x - item.size / 2 - crop.x,
+    y: item.y - item.size / 2 - crop.y,
+    width: item.size,
+    height: item.size,
+    transform: ""
+  });
+}
+
+function renderShapeSelection(item, crop, radius) {
+  setVisibility([objectLine, objectStart, objectEnd, textRotateHandle, textRotateLine], "hidden");
+  objectBox.setAttribute("visibility", "visible");
+  setAttributes(objectBox, {
+    x: item.x - crop.x,
+    y: item.y - crop.y,
+    width: item.width,
+    height: item.height,
+    transform: ""
+  });
+  setAttributes(textResizeHandle, {
+    cx: item.x + item.width - crop.x,
+    cy: item.y + item.height - crop.y,
+    r: radius,
+    visibility: "visible"
+  });
+}
+
+function renderObjectSelection(state) {
+  if (inlineEdit) {
+    hideObjectSelection();
+    return;
+  }
+  const item = selectedObject(state);
+  if (!item) {
+    hideObjectSelection();
+    objectControls.hidden = true;
+    return;
+  }
+  objectControls.hidden = false;
+  updateObjectControls(item);
   objectSelection.setAttribute("visibility", "visible");
   const crop = state.crop;
   const radius = hitRadius() * .7;
   for (const shape of [objectLine, objectStart, objectEnd, objectBox, textResizeHandle, textRotateHandle, textRotateLine]) shape.setAttribute("vector-effect", "non-scaling-stroke");
-  if (isLine) {
-    objectBox.setAttribute("visibility", "hidden");
-    for (const shape of [textResizeHandle, textRotateHandle, textRotateLine]) shape.setAttribute("visibility", "hidden");
-    for (const shape of [objectLine, objectStart, objectEnd]) shape.setAttribute("visibility", "visible");
-    for (const [name, value] of Object.entries({ x1: item.x1 - crop.x, y1: item.y1 - crop.y, x2: item.x2 - crop.x, y2: item.y2 - crop.y })) objectLine.setAttribute(name, value);
-    for (const [circle, x, y] of [[objectStart, item.x1, item.y1], [objectEnd, item.x2, item.y2]]) {
-      circle.setAttribute("cx", x - crop.x); circle.setAttribute("cy", y - crop.y); circle.setAttribute("r", radius);
-    }
-  } else if (item.type === "text") {
-    for (const shape of [objectLine, objectStart, objectEnd]) shape.setAttribute("visibility", "hidden");
-    objectBox.setAttribute("visibility", "visible");
-    const box = textBounds(item);
-    objectBox.setAttribute("x", 0); objectBox.setAttribute("y", 0);
-    objectBox.setAttribute("width", box.width); objectBox.setAttribute("height", box.height);
-    objectBox.setAttribute("transform", `translate(${item.x - crop.x} ${item.y - crop.y}) rotate(${item.angle || 0})`);
-    const corner = textPoint(item, box.width, box.height);
-    let origin = textPoint(item, box.width / 2, 0);
-    let rotate = textPoint(item, box.width / 2, -radius * 4);
-    const rotateBelow = drag?.handle === "text-rotate" ? drag.rotateBelow : rotate.y < crop.y;
-    if (rotateBelow) {
-      origin = textPoint(item, box.width / 2, box.height);
-      rotate = textPoint(item, box.width / 2, box.height + radius * 4);
-    }
-    for (const [circle, location] of [[textResizeHandle, corner], [textRotateHandle, rotate]]) {
-      circle.setAttribute("cx", location.x - crop.x); circle.setAttribute("cy", location.y - crop.y);
-      circle.setAttribute("r", radius); circle.setAttribute("visibility", "visible");
-    }
-    textRotateLine.setAttribute("x1", origin.x - crop.x); textRotateLine.setAttribute("y1", origin.y - crop.y);
-    textRotateLine.setAttribute("x2", rotate.x - crop.x); textRotateLine.setAttribute("y2", rotate.y - crop.y);
-    textRotateLine.setAttribute("visibility", "visible");
-  } else if (item.type === "number") {
-    for (const shape of [objectLine, objectStart, objectEnd, textResizeHandle, textRotateHandle, textRotateLine]) shape.setAttribute("visibility", "hidden");
-    objectBox.setAttribute("visibility", "visible");
-    objectBox.setAttribute("x", item.x - item.size / 2 - crop.x); objectBox.setAttribute("y", item.y - item.size / 2 - crop.y);
-    objectBox.setAttribute("width", item.size); objectBox.setAttribute("height", item.size); objectBox.setAttribute("transform", "");
-  } else {
-    for (const shape of [objectLine, objectStart, objectEnd, textRotateHandle, textRotateLine]) shape.setAttribute("visibility", "hidden");
-    objectBox.setAttribute("visibility", "visible");
-    objectBox.setAttribute("x", item.x - crop.x); objectBox.setAttribute("y", item.y - crop.y);
-    objectBox.setAttribute("width", item.width); objectBox.setAttribute("height", item.height);
-    objectBox.setAttribute("transform", "");
-    textResizeHandle.setAttribute("cx", item.x + item.width - crop.x);
-    textResizeHandle.setAttribute("cy", item.y + item.height - crop.y);
-    textResizeHandle.setAttribute("r", radius); textResizeHandle.setAttribute("visibility", "visible");
-  }
+  if (["arrow", "line"].includes(item.type)) renderLineSelection(item, crop, radius);
+  else if (item.type === "text") renderTextSelection(item, crop, radius);
+  else if (item.type === "number") renderNumberSelection(item, crop);
+  else renderShapeSelection(item, crop, radius);
 }
 
 function drawMosaic(item, crop) {
@@ -661,35 +796,47 @@ function startTextHandleDrag(event, handle) {
 textResizeHandle.addEventListener("pointerdown", (event) => startTextHandleDrag(event, "text-resize"));
 textRotateHandle.addEventListener("pointerdown", (event) => startTextHandleDrag(event, "text-rotate"));
 
+function startSelectionDrag(event, start) {
+  const state = currentState();
+  let index = selectedIndex;
+  let item = index === null ? null : state.operations[index];
+  let handle = "move";
+  const radius = hitRadius();
+  const isLine = ["arrow", "line"].includes(item?.type);
+  if (isLine && Math.hypot(start.x - item.x1, start.y - item.y1) <= radius) handle = "start";
+  else if (isLine && Math.hypot(start.x - item.x2, start.y - item.y2) <= radius) handle = "end";
+  else {
+    index = hitObject(start, state);
+    item = index === null ? null : state.operations[index];
+  }
+  selectedIndex = index;
+  renderObjectSelection(state);
+  if (!item) return;
+  // 調整欄が現れて画像が下に移動しても、クリックだけで要素が動かないようにする。
+  const dragStart = point(event);
+  drag = { start: dragStart, current: dragStart, index, handle, base: state };
+  canvas.setPointerCapture(event.pointerId);
+}
+
+function placeNumberMarker(event, start) {
+  event.preventDefault();
+  const next = cloneState();
+  const number = next.operations.reduce((max, item) => item.type === "number" ? Math.max(max, item.number) : max, 0) + 1;
+  next.operations.push({ type: "number", x: start.x, y: start.y, size: size(), color: colorInput.value, number });
+  addState(next);
+}
+
 canvas.addEventListener("pointerdown", (event) => {
   if (!sourceImage || submitted || terminal || event.button !== 0) return;
   if (inlineEdit) finishInlineText();
   if (objectControls.contains(document.activeElement)) document.activeElement.blur();
   const start = point(event);
   if (tool === "select") {
-    const state = currentState();
-    let index = selectedIndex;
-    let item = index === null ? null : state.operations[index];
-    let handle = "move";
-    const radius = hitRadius();
-    if (["arrow", "line"].includes(item?.type) && Math.hypot(start.x - item.x1, start.y - item.y1) <= radius) handle = "start";
-    else if (["arrow", "line"].includes(item?.type) && Math.hypot(start.x - item.x2, start.y - item.y2) <= radius) handle = "end";
-    else { index = hitObject(start, state); item = index === null ? null : state.operations[index]; }
-    selectedIndex = index;
-    renderObjectSelection(state);
-    if (!item) return;
-    // 調整欄が現れて画像が下に移動しても、クリックだけで要素が動かないようにする。
-    const dragStart = point(event);
-    drag = { start: dragStart, current: dragStart, index, handle, base: state };
-    canvas.setPointerCapture(event.pointerId);
+    startSelectionDrag(event, start);
     return;
   }
   if (tool === "number") {
-    event.preventDefault();
-    const next = cloneState();
-    const number = next.operations.reduce((max, item) => item.type === "number" ? Math.max(max, item.number) : max, 0) + 1;
-    next.operations.push({ type: "number", x: start.x, y: start.y, size: size(), color: colorInput.value, number });
-    addState(next);
+    placeNumberMarker(event, start);
     return;
   }
   if (tool === "text") {
@@ -731,46 +878,72 @@ canvas.addEventListener("pointermove", (event) => {
   }
 });
 
+function finishSelectionDrag(event, originalDrag, end) {
+  if (Math.hypot(end.x - originalDrag.start.x, end.y - originalDrag.start.y) >= 0.5) {
+    addState(movedObjectState(originalDrag, end));
+    return;
+  }
+  renderObjectSelection(currentState());
+  const item = currentState().operations[selectedIndex];
+  if (item?.type !== "text" || originalDrag.handle?.startsWith("text-")) return;
+  event.preventDefault();
+  startInlineText(item, selectedIndex);
+}
+
+function hasMinimumArea(rect) {
+  return rect.width >= 4 && rect.height >= 4;
+}
+
+function createDragOperation(start, end, rect) {
+  switch (tool) {
+    case "mosaic": {
+      if (!hasMinimumArea(rect)) return null;
+      const blockSize = Math.max(2, Math.min(160, Math.floor(Number(mosaicBlockInput.value) || 12)));
+      mosaicBlockInput.value = blockSize;
+      return { type: "mosaic", ...rect, blockSize };
+    }
+    case "redact":
+    case "marker": {
+      if (!hasMinimumArea(rect)) return null;
+      const area = tool === "redact" ? coveringRectangle(start, end) : rect;
+      return { type: tool, ...area, color: colorInput.value };
+    }
+    case "rect":
+    case "ellipse":
+      if (!hasMinimumArea(rect)) return null;
+      return { type: tool, ...rect, size: size(), color: colorInput.value };
+    case "arrow":
+    case "line":
+      if (Math.hypot(end.x - start.x, end.y - start.y) < 4) return null;
+      return { type: tool, x1: start.x, y1: start.y, x2: end.x, y2: end.y, size: size(), color: colorInput.value };
+    default:
+      return null;
+  }
+}
+
+function createDragState(start, end) {
+  const rect = rectangle(start, end);
+  if (tool === "crop") return hasMinimumArea(rect) ? { ...cloneState(), crop: rect } : null;
+  const operation = createDragOperation(start, end, rect);
+  if (!operation) return null;
+  const next = cloneState();
+  next.operations.push(operation);
+  return next;
+}
+
 canvas.addEventListener("pointerup", (event) => {
   if (!drag) return;
-  const end = point(event, !/^(text|shape)-/.test(drag.handle || ""));
-  const start = drag.start;
-  if (tool === "select") {
-    const originalDrag = drag;
-    drag = null;
-    cancelDragPreview();
-    if (Math.hypot(end.x - start.x, end.y - start.y) >= 0.5) addState(movedObjectState(originalDrag, end));
-    else {
-      renderObjectSelection(currentState());
-      const item = currentState().operations[selectedIndex];
-      if (item?.type === "text" && !originalDrag.handle?.startsWith("text-")) {
-        event.preventDefault();
-        startInlineText(item, selectedIndex);
-      }
-    }
-    return;
-  }
+  const originalDrag = drag;
+  const end = point(event, !/^(text|shape)-/.test(originalDrag.handle || ""));
   drag = null;
-  clearOverlay();
-  const rect = rectangle(start, end);
-  const next = cloneState();
-  if (tool === "crop" && rect.width >= 4 && rect.height >= 4) {
-    next.crop = rect;
-  } else if (tool === "mosaic" && rect.width >= 4 && rect.height >= 4) {
-    const blockSize = Math.max(2, Math.min(160, Math.floor(Number(mosaicBlockInput.value) || 12)));
-    mosaicBlockInput.value = blockSize;
-    next.operations.push({ type: "mosaic", ...rect, blockSize });
-  } else if ((tool === "redact" || tool === "marker") && rect.width >= 4 && rect.height >= 4) {
-    const area = tool === "redact" ? coveringRectangle(start, end) : rect;
-    next.operations.push({ type: tool, ...area, color: colorInput.value });
-  } else if ((tool === "rect" || tool === "ellipse") && rect.width >= 4 && rect.height >= 4) {
-    next.operations.push({ type: tool, ...rect, size: size(), color: colorInput.value });
-  } else if ((tool === "arrow" || tool === "line") && Math.hypot(end.x - start.x, end.y - start.y) >= 4) {
-    next.operations.push({ type: tool, x1: start.x, y1: start.y, x2: end.x, y2: end.y, size: size(), color: colorInput.value });
-  } else {
+  if (tool === "select") {
+    cancelDragPreview();
+    finishSelectionDrag(event, originalDrag, end);
     return;
   }
-  addState(next);
+  clearOverlay();
+  const next = createDragState(originalDrag.start, end);
+  if (next) addState(next);
 });
 canvas.addEventListener("pointercancel", () => { drag = null; cancelDragPreview(); clearOverlay(); if (sourceImage) renderObjectSelection(currentState()); });
 
@@ -799,13 +972,15 @@ resetButton.addEventListener("click", () => {
   cancelDragPreview();
   clearOverlay();
   selectedIndex = null;
-  addState(JSON.parse(JSON.stringify(history[0])));
+  addState(structuredClone(history[0]));
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.isComposing || event.keyCode === 229 || event.altKey || (!event.metaKey && !event.ctrlKey) || event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+  if (event.isComposing || event.key === "Process" || event.altKey || (!event.metaKey && !event.ctrlKey) || event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
   const key = event.key.toLowerCase();
-  const direction = key === "z" ? (event.shiftKey ? "redo" : "undo") : key === "y" && !event.shiftKey ? "redo" : null;
+  let direction = null;
+  if (key === "z") direction = event.shiftKey ? "redo" : "undo";
+  else if (key === "y" && !event.shiftKey) direction = "redo";
   if (!direction || submitted || terminal || !sourceImage) return;
   event.preventDefault();
   navigateHistory(direction);
@@ -900,7 +1075,10 @@ retakeButton.addEventListener("click", async () => {
       const tab = await chrome.tabs.getCurrent();
       if (tab?.id) await chrome.tabs.remove(tab.id);
       else window.close();
-    } catch (_) { window.close(); }
+    } catch (error) {
+      console.warn("Could not remove the editor tab after starting a retake; closing the window instead.", error);
+      window.close();
+    }
   } catch (error) {
     setEditingDisabled(false);
     cancelButton.disabled = false;
@@ -931,21 +1109,31 @@ exportButton.addEventListener("click", async () => {
   }
 });
 
-cancelButton.addEventListener("click", async () => {
-  if (terminal || restoredDraftId) {
-    if (Number.isInteger(sourceTabId)) {
-      try {
-        const source = await chrome.tabs.update(sourceTabId, { active: true });
-        if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
-      } catch (_) { /* The source tab may have been closed. */ }
-    }
-    try {
-      const tab = await chrome.tabs.getCurrent();
-      if (tab?.id) await chrome.tabs.remove(tab.id);
-      else window.close();
-    } catch (_) { window.close(); }
-    return;
+async function focusSourceTab() {
+  if (!Number.isInteger(sourceTabId)) return;
+  try {
+    const source = await chrome.tabs.update(sourceTabId, { active: true });
+    if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
+  } catch (_) { /* The source tab may have been closed. */ }
+}
+
+async function closeEditorTab() {
+  try {
+    const tab = await chrome.tabs.getCurrent();
+    if (tab?.id) await chrome.tabs.remove(tab.id);
+    else window.close();
+  } catch (error) {
+    console.warn("Could not remove the editor tab; closing the window instead.", error);
+    window.close();
   }
+}
+
+async function closeEditorAndRestoreSource() {
+  await focusSourceTab();
+  await closeEditorTab();
+}
+
+async function cancelActiveCapture() {
   cancelButton.disabled = true;
   try {
     const result = await chrome.runtime.sendMessage({ type: "capture:cancel", jobId });
@@ -956,6 +1144,14 @@ cancelButton.addEventListener("click", async () => {
     cancelButton.disabled = false;
     hint.textContent = kiriT(error?.message || "キャンセルできませんでした。");
   }
+}
+
+cancelButton.addEventListener("click", async () => {
+  if (terminal || restoredDraftId) {
+    await closeEditorAndRestoreSource();
+    return;
+  }
+  await cancelActiveCapture();
 });
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -978,79 +1174,149 @@ window.addEventListener("beforeunload", () => {
   if (draftSourceUrl) URL.revokeObjectURL(draftSourceUrl);
 });
 
-async function initialize() {
-  if ((!jobId && !restoredDraftId) || !context) throw new Error(kiriT("編集する画像が見つかりません。"));
-  try { draftDb = (await import("./draft-store.js")).draftStore; await draftDb.deleteExpired(); } catch (_) { draftStatus.textContent = kiriT("下書きを保存できませんでした。"); }
-  if (restoredDraftId) {
-    retakeButton.title = kiriT("復元した下書きからは撮り直せません。元のページから撮影してください。");
-    if (!draftDb) throw new Error(kiriT("下書きを読み込めませんでした。"));
-    draftData = await draftDb.get(restoredDraftId);
-    if (!draftData || draftData.expiresAt <= Date.now()) throw new Error(kiriT("下書きが見つからないか、保存期限が過ぎています。"));
-    const settings = await chrome.storage.local.get("draftRetentionDays");
-    const retentionDays = [0, 1, 7, 30].includes(settings.draftRetentionDays) ? settings.draftRetentionDays : 7;
-    if (retentionDays === 0) draftClosed = true;
-    else draftData.retentionDays = retentionDays;
-    draftSourceUrl = URL.createObjectURL(draftData.source); sourceImage = new Image(); sourceImage.src = draftSourceUrl; await sourceImage.decode();
-    history = draftData.history; redoStack = draftData.redoStack || []; render();
-    exportButton.textContent = ({ save: kiriT("保存"), copy: kiriT("コピー"), both: kiriT("保存してコピー") })[draftData.options.destination] || kiriT("出力");
-    exportButton.disabled = false; cancelButton.textContent = kiriT("閉じる"); selectTool("crop");
-    return;
+async function initializeDraftStorage() {
+  try {
+    draftDb = (await import("./draft-store.js")).draftStore;
+    await draftDb.deleteExpired();
+  } catch (error) {
+    console.error("Failed to initialize draft storage.", error);
+    draftStatus.textContent = kiriT("下書きを保存できませんでした。");
   }
+}
+
+function retentionDaysFromSettings(settings) {
+  return [0, 1, 7, 30].includes(settings.draftRetentionDays) ? settings.draftRetentionDays : 7;
+}
+
+function setExportDestination(destination) {
+  const labels = { save: kiriT("保存"), copy: kiriT("コピー"), both: kiriT("保存してコピー") };
+  exportButton.textContent = labels[destination] || kiriT("出力");
+}
+
+async function initializeRestoredDraft() {
+  retakeButton.title = kiriT("復元した下書きからは撮り直せません。元のページから撮影してください。");
+  if (!draftDb) throw new Error(kiriT("下書きを読み込めませんでした。"));
+  draftData = await draftDb.get(restoredDraftId);
+  if (!draftData || draftData.expiresAt <= Date.now()) throw new Error(kiriT("下書きが見つからないか、保存期限が過ぎています。"));
+  const settings = await chrome.storage.local.get("draftRetentionDays");
+  const retentionDays = retentionDaysFromSettings(settings);
+  if (retentionDays === 0) draftClosed = true;
+  else draftData.retentionDays = retentionDays;
+  draftSourceUrl = URL.createObjectURL(draftData.source);
+  sourceImage = new Image();
+  sourceImage.src = draftSourceUrl;
+  await sourceImage.decode();
+  history = draftData.history;
+  redoStack = draftData.redoStack || [];
+  render();
+  setExportDestination(draftData.options.destination);
+  exportButton.disabled = false;
+  cancelButton.textContent = kiriT("閉じる");
+  selectTool("crop");
+}
+
+function saveDisconnectFallback(blob) {
+  if (!blob) return;
+  if (outputUrl) URL.revokeObjectURL(outputUrl);
+  outputUrl = URL.createObjectURL(blob);
+  fallback.href = outputUrl;
+  fallback.hidden = false;
+}
+
+function handleEditorDisconnect() {
+  if (terminal) return;
+  if (inlineEdit) finishInlineText();
+  terminal = true;
+  clearInterval(heartbeat);
+  hint.textContent = kiriT("編集の接続が切れました。編集画像をPNGとして保存できます。");
+  setEditingDisabled(true);
+  cancelButton.disabled = false;
+  cancelButton.textContent = kiriT("閉じる");
+  if (canvas.width && canvas.height && sourceImage) canvas.toBlob(saveDisconnectFallback, "image/png");
+}
+
+function connectToCapture() {
   port = chrome.runtime.connect({ name: "kiritori-editor" });
-  port.onDisconnect.addListener(() => {
-    if (terminal) return;
-    if (inlineEdit) finishInlineText();
-    terminal = true;
-    clearInterval(heartbeat);
-    hint.textContent = kiriT("編集の接続が切れました。編集画像をPNGとして保存できます。");
-    setEditingDisabled(true);
-    cancelButton.disabled = false;
-    cancelButton.textContent = kiriT("閉じる");
-    if (canvas.width && canvas.height && sourceImage) {
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        if (outputUrl) URL.revokeObjectURL(outputUrl);
-        outputUrl = URL.createObjectURL(blob);
-        fallback.href = outputUrl;
-        fallback.hidden = false;
-      }, "image/png");
-    }
-  });
+  port.onDisconnect.addListener(handleEditorDisconnect);
   port.postMessage({ type: "hello", jobId });
-  heartbeat = setInterval(() => { try { port.postMessage({ type: "heartbeat" }); } catch (_) { clearInterval(heartbeat); } }, 20_000);
+  heartbeat = setInterval(() => {
+    try {
+      port.postMessage({ type: "heartbeat" });
+    } catch (error) {
+      console.warn("Editor heartbeat failed; stopping the timer.", error);
+      clearInterval(heartbeat);
+    }
+  }, 20_000);
+}
+
+async function loadCapture() {
+  connectToCapture();
   const response = await chrome.runtime.sendMessage({ type: "capture:editor:load", jobId });
   if (!response?.ok) throw new Error(response?.error || kiriT("画像を読み込めませんでした。"));
   sourceTabId = Number.isInteger(response.sourceTabId) ? response.sourceTabId : null;
   sourceImage = new Image();
   sourceImage.src = response.url;
   await sourceImage.decode();
-  if (terminal) return;
-  history = [{ crop: { x: 0, y: 0, width: sourceImage.naturalWidth, height: sourceImage.naturalHeight }, operations: [] }];
-  if (draftDb && response.meta && response.options) {
-    try {
-      const settings = await chrome.storage.local.get("draftRetentionDays");
-      const retentionDays = [0, 1, 7, 30].includes(settings.draftRetentionDays) ? settings.draftRetentionDays : 7;
-      if (retentionDays > 0) {
-        const source = await (await fetch(response.url)).blob();
-        const width = response.meta.mode === "scroll-area" ? response.meta.scrollArea.clientWidth : response.meta.mode === "region" ? response.meta.region.width : response.meta.viewportWidth;
-        draftData = { id: jobId, source, meta: response.meta, options: response.options, scale: sourceImage.naturalWidth / width, retentionDays };
-        const now = Date.now();
-        await draftDb.put({ ...draftData, history, redoStack, updatedAt: now, expiresAt: now + retentionDays * 86400000 });
-        draftStatus.textContent = kiriT("下書きを保存しました。");
-      }
-    } catch (_) { draftStatus.textContent = kiriT("下書きを保存できませんでした。"); }
+  return terminal ? null : response;
+}
+
+function sourceImageWidth(meta) {
+  if (meta.mode === "scroll-area") return meta.scrollArea.clientWidth;
+  if (meta.mode === "region") return meta.region.width;
+  return meta.viewportWidth;
+}
+
+async function saveInitialDraft(response) {
+  if (!draftDb || !response.meta || !response.options) return;
+  try {
+    const settings = await chrome.storage.local.get("draftRetentionDays");
+    const retentionDays = retentionDaysFromSettings(settings);
+    if (retentionDays <= 0) return;
+    const source = await (await fetch(response.url)).blob();
+    const width = sourceImageWidth(response.meta);
+    draftData = { id: jobId, source, meta: response.meta, options: response.options, scale: sourceImage.naturalWidth / width, retentionDays };
+    const now = Date.now();
+    await draftDb.put({ ...draftData, history, redoStack, updatedAt: now, expiresAt: now + retentionDays * 86400000 });
+    draftStatus.textContent = kiriT("下書きを保存しました。");
+  } catch (error) {
+    console.error("Failed to save the initial draft.", error);
+    draftStatus.textContent = kiriT("下書きを保存できませんでした。");
   }
+}
+
+async function initializeCaptureEditor() {
+  const response = await loadCapture();
+  if (!response) return;
+  history = [{ crop: { x: 0, y: 0, width: sourceImage.naturalWidth, height: sourceImage.naturalHeight }, operations: [] }];
+  await saveInitialDraft(response);
   render();
-  exportButton.textContent = ({ save: kiriT("保存"), copy: kiriT("コピー"), both: kiriT("保存してコピー") })[response.destination] || kiriT("出力");
+  setExportDestination(response.destination);
   exportButton.disabled = false;
   retakeButton.disabled = false;
   selectTool("crop");
 }
 
-initialize().catch((error) => {
+async function initialize() {
+  if ((!jobId && !restoredDraftId) || !context) throw new Error(kiriT("編集する画像が見つかりません。"));
+  await initializeDraftStorage();
+  if (restoredDraftId) return initializeRestoredDraft();
+  return initializeCaptureEditor();
+}
+
+function handleInitializationError(error) {
+  console.error("Failed to initialize the editor.", error);
   hint.textContent = kiriT(error?.message || "画像を読み込めませんでした。");
   cancelButton.textContent = kiriT("閉じる");
   terminal = true;
   clearInterval(heartbeat);
-  if (jobId) chrome.runtime.sendMessage({ type: "capture:cancel", jobId }).catch(() => undefined);
-});
+  if (jobId) {
+    void chrome.runtime.sendMessage({ type: "capture:cancel", jobId }).catch((cancelError) => {
+      console.error("Failed to cancel capture after editor initialization failed.", cancelError);
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  void loadInitialPalette();
+  void initialize().catch(handleInitializationError);
+}, { once: true });
