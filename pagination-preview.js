@@ -1,7 +1,7 @@
 kiriLocalizeDocument();
 const jobId = new URLSearchParams(location.search).get("job");
 const pages = document.querySelector("#pages");
-const status = document.querySelector("#status");
+const statusOutput = document.querySelector("#status");
 const warning = document.querySelector("#warning");
 const save = document.querySelector("#save");
 const cancel = document.querySelector("#cancel");
@@ -15,13 +15,14 @@ let port, heartbeat, data, current = 0, mode = "single", submitted = false, term
 
 function render() {
   if (!data) return;
-  single.setAttribute("aria-pressed", String(mode === "single"));
-  stacked.setAttribute("aria-pressed", String(mode === "stacked"));
-  pager.hidden = mode !== "single";
+  const displayMode = String(mode);
+  single.setAttribute("aria-pressed", String(displayMode === "single"));
+  stacked.setAttribute("aria-pressed", String(displayMode === "stacked"));
+  pager.hidden = displayMode !== "single";
   previous.disabled = current === 0;
   next.disabled = current >= data.pagination.count - 1;
   counter.textContent = `${current + 1} / ${data.pagination.count}`;
-  const indices = mode === "single" ? [current] : Array.from({ length: data.pagination.count }, (_, index) => index);
+  const indices = displayMode === "single" ? [current] : Array.from({ length: data.pagination.count }, (_, index) => index);
   const fragment = document.createDocumentFragment();
   for (const index of indices) {
     const figure = document.createElement("figure"); figure.className = "page";
@@ -43,42 +44,62 @@ next.addEventListener("click", () => { if (data) { current = Math.min(data.pagin
 save.addEventListener("click", async () => {
   if (!data || submitted || terminal) return;
   submitted = true; save.disabled = true; cancel.disabled = true;
-  status.textContent = kiriT("撮影した画像を出力しています…");
+  statusOutput.textContent = kiriT("撮影した画像を出力しています…");
   try {
     const response = await chrome.runtime.sendMessage({ type: "capture:pagination:accept", jobId });
     if (!response?.ok) throw new Error(response?.error || kiriT("画像を出力できませんでした。"));
   } catch (error) {
     submitted = false; save.disabled = false; cancel.disabled = false;
-    status.textContent = kiriT(error?.message || "画像を出力できませんでした。");
+    statusOutput.textContent = kiriT(error?.message || "画像を出力できませんでした。");
   }
 });
-cancel.addEventListener("click", async () => {
+cancel.addEventListener("click", handleCancelClick);
+
+async function handleCancelClick() {
   if (terminal) {
-    if (Number.isInteger(data?.sourceTabId)) {
-      try {
-        const source = await chrome.tabs.update(data.sourceTabId, { active: true });
-        if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
-      } catch (_) { /* The source tab may have been closed. */ }
-    }
-    try {
-      const tab = await chrome.tabs.getCurrent();
-      if (tab?.id) await chrome.tabs.remove(tab.id);
-      else window.close();
-    } catch (_) { window.close(); }
+    await closePreview();
     return;
   }
+  await cancelCapture();
+}
+
+async function closePreview() {
+  await restoreSourceTab();
+  try {
+    const tab = await chrome.tabs.getCurrent();
+    if (tab?.id) await chrome.tabs.remove(tab.id);
+    else window.close();
+  } catch (error) {
+    console.warn("プレビュータブを閉じられないため、ウィンドウを閉じます。", error);
+    window.close();
+  }
+}
+
+async function restoreSourceTab() {
+  if (!Number.isInteger(data?.sourceTabId)) return;
+  try {
+    const source = await chrome.tabs.update(data.sourceTabId, { active: true });
+    if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
+  } catch (_) { /* 元タブが閉じられていても、プレビューを閉じる処理は続けます。 */ }
+}
+
+async function cancelCapture() {
   cancel.disabled = true;
   try {
     const response = await chrome.runtime.sendMessage({ type: "capture:cancel", jobId });
     if (!response?.ok) throw new Error(response?.error || kiriT("キャンセルできませんでした。"));
-  } catch (error) { cancel.disabled = false; status.textContent = kiriT(error?.message || "キャンセルできませんでした。"); }
-});
+  } catch (error) {
+    cancel.disabled = false;
+    statusOutput.textContent = kiriT(error?.message || "キャンセルできませんでした。");
+  }
+}
+
 chrome.runtime.onMessage.addListener(message => {
   const state = message?.type === "capture:progress" && message.status;
-  if (!state || state.jobId !== jobId || state.active) return;
+  if (state?.jobId !== jobId || state?.active) return;
   terminal = true; clearInterval(heartbeat); save.disabled = true; cancel.disabled = false;
   cancel.textContent = kiriT("閉じる");
-  status.textContent = state.message || (state.phase === "completed" ? kiriT("出力しました。") : kiriT("撮影を終了しました。"));
+  statusOutput.textContent = state.message || (state.phase === "completed" ? kiriT("出力しました。") : kiriT("撮影を終了しました。"));
 });
 window.addEventListener("beforeunload", () => clearInterval(heartbeat));
 async function initialize() {
@@ -87,7 +108,7 @@ async function initialize() {
   port.onDisconnect.addListener(() => {
     if (terminal) return;
     terminal = true; clearInterval(heartbeat); save.disabled = true; cancel.disabled = false; cancel.textContent = kiriT("閉じる");
-    status.textContent = kiriT("プレビューの接続が切れました。もう一度撮影してください。");
+    statusOutput.textContent = kiriT("プレビューの接続が切れました。もう一度撮影してください。");
   });
   port.postMessage({ type: "hello", jobId });
   heartbeat = setInterval(() => { try { port.postMessage({ type: "heartbeat" }); } catch (_) {} }, 20_000);
@@ -97,11 +118,13 @@ async function initialize() {
   if (terminal) return;
   data = response;
   if (response.meta?.paginationWarning) { warning.textContent = response.meta.paginationWarning; warning.hidden = false; }
-  status.textContent = kiriT("画像を確認して保存してください。");
+  statusOutput.textContent = kiriT("画像を確認して保存してください。");
   save.disabled = false; render();
 }
-initialize().catch(error => {
-  status.textContent = kiriT(error?.message || "画像を読み込めませんでした。");
+try {
+  await initialize();
+} catch (error) {
+  statusOutput.textContent = kiriT(error?.message || "画像を読み込めませんでした。");
   terminal = true; clearInterval(heartbeat); cancel.disabled = false; cancel.textContent = kiriT("閉じる");
   if (jobId) chrome.runtime.sendMessage({ type: "capture:cancel", jobId }).catch(() => undefined);
-});
+}
