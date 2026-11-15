@@ -609,13 +609,13 @@ function createCaptureCancelled(message) {
 async function capturePaginationPages(tab, job, state, target, timing, limit, waitMs) {
   const seen = new Set();
   for (let index = 0; index < limit; index += 1) {
-    const shouldContinue = await capturePaginationPage(tab, job, state, target, timing, seen, index, limit, waitMs);
+    const shouldContinue = await capturePaginationPage({ tab, job, state, target, timing, seen, index, limit, waitMs });
     if (!shouldContinue) return true;
   }
   return false;
 }
 
-async function capturePaginationPage(tab, job, state, target, timing, seen, index, limit, waitMs) {
+async function capturePaginationPage({ tab, job, state, target, timing, seen, index, limit, waitMs }) {
   throwIfCancelled(job);
   await assertTabStillActive(tab.id, tab.windowId);
   const snapshot = await executeInTab(tab.id, paginationSnapshot);
