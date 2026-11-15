@@ -292,7 +292,7 @@ function updateButtons() {
 
 function updateCanvasDisplaySize(crop) {
   const style = getComputedStyle(workspace);
-  const available = Math.max(1, workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
+  const available = Math.max(1, workspace.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight));
   const scale = Number(editorZoom.value) / 100;
   wrap.style.width = `${Math.min(crop.width, 1100, available) * scale}px`;
   updateWorkspaceScroll();
