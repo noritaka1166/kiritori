@@ -1183,19 +1183,6 @@ function selectPaginationButton(jobId, instruction, cancelText) {
       if (!(target instanceof Element)) return;
       const element = target.closest('button, a, [role="button"], [role="link"], input[type="button"], input[type="submit"], [tabindex][aria-label]');
       if (!element) return;
-      finish(describePaginationTarget(element));
-    };
-
-    function describePaginationTarget(element) {
-      return {
-        selector: buildElementSelector(element),
-        fallback: findUniqueAttributeSelector(element),
-        tag: element.localName,
-        label: readPaginationLabel(element)
-      };
-    }
-
-    function buildElementSelector(element) {
       const parts = [];
       for (let node = element; node?.nodeType === 1; node = node.parentElement) {
         if (node.id && document.querySelectorAll(`#${CSS.escape(node.id)}`).length === 1) { parts.unshift(`#${CSS.escape(node.id)}`); break; }
@@ -1203,22 +1190,16 @@ function selectPaginationButton(jobId, instruction, cancelText) {
         for (let sibling = node.previousElementSibling; sibling; sibling = sibling.previousElementSibling) if (sibling.tagName === node.tagName) position++;
         parts.unshift(`${node.localName}:nth-of-type(${position})`);
       }
-      return parts.join(" > ");
-    }
-
-    function findUniqueAttributeSelector(element) {
+      let fallback = null;
       for (const name of ["aria-label", "data-tooltip", "title"]) {
         const value = name === "data-tooltip" ? element.dataset.tooltip : element.getAttribute(name);
         if (!value) continue;
         const candidate = `${element.localName}[${name}=${JSON.stringify(value)}]`;
-        if (document.querySelectorAll(candidate).length === 1) return candidate;
+        if (document.querySelectorAll(candidate).length === 1) { fallback = candidate; break; }
       }
-      return null;
-    }
-
-    function readPaginationLabel(element) {
-      return (element.getAttribute("aria-label") || element.dataset.tooltip || element.getAttribute("title") || element.textContent || element.value || "").trim().slice(0, 120);
-    }
+      const label = (element.getAttribute("aria-label") || element.dataset.tooltip || element.getAttribute("title") || element.textContent || element.value || "").trim().slice(0, 120);
+      finish({ selector: parts.join(" > "), fallback, tag: element.localName, label });
+    };
     globalThis.__kiritoriPaginationPicker = { jobId, cancel: () => finish(null) };
     document.addEventListener("click", onClick, true);
     document.addEventListener("mousedown", onMouseDown, true);
