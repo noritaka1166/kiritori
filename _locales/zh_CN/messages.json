@@ -1063,5 +1063,14 @@
   },
   "draft_delete_description": {
     "message": "将删除“$1”。此操作无法撤销。"
+  },
+  "capture_restricted_browser": {
+    "message": "无法截取 Chrome 设置等浏览器内部页面。"
+  },
+  "capture_restricted_store": {
+    "message": "无法截取 Chrome 网上应用店页面。"
+  },
+  "capture_restricted_file": {
+    "message": "要截取本地文件，请在扩展程序设置中允许访问文件网址。"
   }
 }

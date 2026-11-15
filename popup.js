@@ -1,3 +1,4 @@
+import { capturePageRestriction } from "./capture-availability.js";
 import { createCaptureStatusTracker } from "./capture-status.js";
 import { shouldShowCaptureProgress, getProgressMessage } from "./popup-progress.js";
 import { defaults, siteKey, createSettingsStore, normalizeCaptureDelay, normalizePaginationLimit, normalizePaginationWait, normalizeMaxFrames, normalizeScrollWait } from "./popup-settings.js";
@@ -118,6 +119,8 @@ const manualHide = document.querySelector("#manual-hide");
 const previewEdit = document.querySelector("#preview-edit");
 const folderRow = document.querySelector("#folder-row");
 const captureButton = document.querySelector("#capture");
+const captureAvailability = document.querySelector("#capture-availability");
+let captureRestricted = false;
 const statusOutput = document.querySelector("#status");
 const progressPanel = document.querySelector("#capture-progress");
 const progressText = document.querySelector("#progress-text");
@@ -189,7 +192,7 @@ clearFailures.addEventListener("click", async () => {
 });
 
 function updateCaptureButton() {
-  captureButton.disabled = !settingsLoaded || captureBusy || startPending;
+  captureButton.disabled = !settingsLoaded || captureBusy || startPending || captureRestricted;
 }
 
 function renderCaptureStatus(captureStatus) {
@@ -340,7 +343,22 @@ function applyLegacySettings() {
 
 async function loadSettings() {
   const [tabs, data] = await Promise.all([chrome.tabs.query({ active: true, lastFocusedWindow: true }), settingsStore.load()]);
-  siteHost = siteKey(tabs[0]?.url);
+  const tabUrl = tabs[0]?.url;
+  let fileAccessAllowed;
+  if (tabUrl?.startsWith("file:")) {
+    try { fileAccessAllowed = await chrome.extension.isAllowedFileSchemeAccess(); }
+    catch (error) { console.warn("ファイルへのアクセス設定を確認できませんでした。", error); }
+  }
+  const restriction = capturePageRestriction(tabUrl, fileAccessAllowed);
+  const restrictionMessages = {
+    "browser-page": "Chromeの設定画面など、ブラウザー内部のページは撮影できません。",
+    "web-store": "Chrome ウェブストアのページは撮影できません。",
+    "file-access": "ローカルファイルを撮影するには、拡張機能の設定でファイルのURLへのアクセスを許可してください。"
+  };
+  captureRestricted = Boolean(restriction);
+  captureAvailability.hidden = !restriction;
+  captureAvailability.textContent = restriction ? kiriT(restrictionMessages[restriction]) : "";
+  siteHost = siteKey(tabUrl);
   const profiles = data.siteCaptureSettings;
   const hasProfile = Boolean(siteHost && profiles && Object.hasOwn(profiles, siteHost));
   siteSettingsEnabled.disabled = !siteHost;

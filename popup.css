@@ -86,3 +86,5 @@ output[aria-live="polite"] { display: block; }
 .dialog-actions button { min-height: 34px; padding: 6px 10px; border: 1px solid #d0d9e7; background: #fff; color: #37527a; }
 .dialog-actions #draft-clear-confirm { border-color: #b3261e; background: #b3261e; color: #fff; }
 .dialog-actions button:disabled { opacity: .6; }
+
+.capture-availability:not([hidden]) { margin-bottom: 12px; padding: 10px 12px; border: 1px solid #e6c68d; border-radius: 9px; background: #fff8e8; color: #714c10; font-size: 13px; line-height: 1.45; }

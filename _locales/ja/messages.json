@@ -1063,5 +1063,14 @@
   },
   "draft_delete_description": {
     "message": "「$1」を削除します。この操作は取り消せません。"
+  },
+  "capture_restricted_browser": {
+    "message": "Chromeの設定画面など、ブラウザー内部のページは撮影できません。"
+  },
+  "capture_restricted_store": {
+    "message": "Chrome ウェブストアのページは撮影できません。"
+  },
+  "capture_restricted_file": {
+    "message": "ローカルファイルを撮影するには、拡張機能の設定でファイルのURLへのアクセスを許可してください。"
   }
 }

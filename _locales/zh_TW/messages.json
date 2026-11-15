@@ -1063,5 +1063,14 @@
   },
   "draft_delete_description": {
     "message": "將刪除「$1」。此操作無法復原。"
+  },
+  "capture_restricted_browser": {
+    "message": "無法擷取 Chrome 設定等瀏覽器內部頁面。"
+  },
+  "capture_restricted_store": {
+    "message": "無法擷取 Chrome 線上應用程式商店頁面。"
+  },
+  "capture_restricted_file": {
+    "message": "若要擷取本機檔案，請在擴充功能設定中允許存取檔案網址。"
   }
 }

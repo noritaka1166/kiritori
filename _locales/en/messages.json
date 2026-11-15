@@ -1063,5 +1063,14 @@
   },
   "draft_delete_description": {
     "message": "Delete “$1”? This cannot be undone."
+  },
+  "capture_restricted_browser": {
+    "message": "Browser internal pages, such as Chrome settings, cannot be captured."
+  },
+  "capture_restricted_store": {
+    "message": "Chrome Web Store pages cannot be captured."
+  },
+  "capture_restricted_file": {
+    "message": "To capture local files, allow access to file URLs in the extension settings."
   }
 }
