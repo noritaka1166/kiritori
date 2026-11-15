@@ -2068,13 +2068,27 @@ function restoreScrollableArea(jobId) {
   return true;
 
   function restoreInteractionStyle(style) {
-    const saved = parseMarker(style.dataset.kiritoriScrollInteraction);
-    if (isOwnedMarker(saved) && saved.jobId === jobId) style.remove();
+    let saved;
+    try {
+      saved = JSON.parse(style.dataset.kiritoriScrollInteraction || "null");
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      // Ignore malformed marker data left by a page or an interrupted capture.
+      return;
+    }
+    if (saved?.owner === "kiritori" && saved.version === 1 && saved.jobId === jobId) style.remove();
   }
 
   function restoreStickyElement(element) {
-    const saved = parseMarker(element.dataset.kiritoriScrollSticky);
-    if (!isOwnedMarker(saved) || saved.jobId !== jobId) return;
+    let saved;
+    try {
+      saved = JSON.parse(element.dataset.kiritoriScrollSticky || "null");
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      // Ignore malformed marker data left by a page or an interrupted capture.
+      return;
+    }
+    if (saved?.owner !== "kiritori" || saved.version !== 1 || saved.jobId !== jobId) return;
     if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
       if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
       else element.style.removeProperty("visibility");
@@ -2095,25 +2109,18 @@ function restoreScrollableArea(jobId) {
       if (!captureState.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
     }
     if (!captureState.markerName) return;
-    const saved = parseMarker(element.dataset.kiritoriScrollState);
-    if (!isOwnedMarker(saved)) return;
+    let saved;
+    try {
+      saved = JSON.parse(element.dataset.kiritoriScrollState || "null");
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      // Ignore malformed marker data left by a page or an interrupted capture.
+      return;
+    }
+    if (saved?.owner !== "kiritori" || saved.version !== 1) return;
     if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
     else element.dataset.kiritoriScrollState = saved.previousMarker;
   }
-
-  function parseMarker(value) {
-    try {
-      return JSON.parse(value || "null");
-    } catch (_) {
-      // Ignore malformed marker data left by a page or an interrupted capture.
-      return null;
-    }
-  }
-
-  function isOwnedMarker(saved) {
-    return saved?.owner === "kiritori" && saved.version === 1;
-  }
-
 }
 function restoreManualHiddenElements(jobId) {
   if (window.__kiritoriManualHide?.jobId === jobId) window.__kiritoriManualHide.restore();
