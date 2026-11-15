@@ -1482,7 +1482,6 @@ async function restoreStaleScrollAreaState() {
   const markerOwner = "kiritori";
   const markerVersion = 1;
   const emptyMarker = "null";
-  const importantPriority = "important";
   if (window.__kiritoriScrollSelector?.cancel) {
     window.__kiritoriScrollSelector.cancel();
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -1497,7 +1496,11 @@ async function restoreStaleScrollAreaState() {
     if (!saved) return;
     element.scrollTop = saved.originalTop;
     element.scrollLeft = saved.originalLeft;
-    restoreInlineStyle(element, "scroll-behavior", "auto", saved.scrollBehavior, saved.scrollPriority, saved.hadStyle);
+    if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+      if (saved.scrollBehavior) element.style.setProperty("scroll-behavior", saved.scrollBehavior, saved.scrollPriority);
+      else element.style.removeProperty("scroll-behavior");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
     if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
     else element.dataset.kiritoriScrollState = saved.previousMarker;
   }
@@ -1509,7 +1512,11 @@ async function restoreStaleScrollAreaState() {
   function restoreStickyMarker(element) {
     const saved = parseSavedMarker(element.dataset.kiritoriScrollSticky);
     if (!saved) return;
-    restoreInlineStyle(element, "visibility", "hidden", saved.visibility, saved.visibilityPriority, saved.hadStyle);
+    if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
+      if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
+      else element.style.removeProperty("visibility");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
     if (saved.previousMarker === null) delete element.dataset.kiritoriScrollSticky;
     else element.dataset.kiritoriScrollSticky = saved.previousMarker;
   }
@@ -1528,7 +1535,11 @@ async function restoreStaleScrollAreaState() {
     if (element?.isConnected && !Object.hasOwn(element.dataset, "kiritoriScrollState")) {
       element.scrollTop = staleCapture.originalTop;
       element.scrollLeft = staleCapture.originalLeft;
-      restoreInlineStyle(element, "scroll-behavior", "auto", staleCapture.scrollBehavior, staleCapture.scrollPriority, staleCapture.hadStyle);
+      if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+        if (staleCapture.scrollBehavior) element.style.setProperty("scroll-behavior", staleCapture.scrollBehavior, staleCapture.scrollPriority);
+        else element.style.removeProperty("scroll-behavior");
+        if (!staleCapture.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+      }
     }
     delete window.__kiritoriScrollCapture;
   }
@@ -1544,13 +1555,6 @@ async function restoreStaleScrollAreaState() {
     }
   };
 
-  const restoreInlineStyle = (element, property, currentValue, savedValue, savedPriority, hadStyle) => {
-    if (element.style.getPropertyValue(property) !== currentValue || element.style.getPropertyPriority(property) !== importantPriority) return;
-    if (savedValue) element.style.setProperty(property, savedValue, savedPriority);
-    else element.style.removeProperty(property);
-    if (!hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
-  };
-
   restoreAreaMarkers();
   restoreStickyMarkers();
   restoreInteractionStyles();
@@ -1560,7 +1564,6 @@ function selectScrollableArea(jobId, labels) {
   const markerOwner = "kiritori";
   const markerVersion = 1;
   const emptyMarker = "null";
-  const importantPriority = "important";
   if (window.__kiritoriScrollSelector?.cancel) void window.__kiritoriScrollSelector.cancel();
 
   function restoreSelectionMarkers() {
@@ -1572,7 +1575,11 @@ function selectScrollableArea(jobId, labels) {
   function restoreStickyMarker(element) {
     const saved = parseMarker(element.dataset.kiritoriScrollSticky);
     if (!saved) return;
-    restoreInlineStyle(element, "visibility", "hidden", saved.visibility, saved.visibilityPriority, saved.hadStyle);
+    if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
+      if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
+      else element.style.removeProperty("visibility");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
     if (saved.previousMarker === null) delete element.dataset.kiritoriScrollSticky;
     else element.dataset.kiritoriScrollSticky = saved.previousMarker;
   }
@@ -1582,7 +1589,11 @@ function selectScrollableArea(jobId, labels) {
     if (!saved) return false;
     element.scrollTop = saved.originalTop;
     element.scrollLeft = saved.originalLeft;
-    restoreInlineStyle(element, "scroll-behavior", "auto", saved.scrollBehavior, saved.scrollPriority, saved.hadStyle);
+    if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+      if (saved.scrollBehavior) element.style.setProperty("scroll-behavior", saved.scrollBehavior, saved.scrollPriority);
+      else element.style.removeProperty("scroll-behavior");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
     if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
     else element.dataset.kiritoriScrollState = saved.previousMarker;
     return true;
@@ -1595,7 +1606,11 @@ function selectScrollableArea(jobId, labels) {
     if (element?.isConnected && !restoreAreaMarker(element)) {
       element.scrollTop = staleCapture.originalTop;
       element.scrollLeft = staleCapture.originalLeft;
-      restoreInlineStyle(element, "scroll-behavior", "auto", staleCapture.scrollBehavior, staleCapture.scrollPriority, staleCapture.hadStyle);
+      if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+        if (staleCapture.scrollBehavior) element.style.setProperty("scroll-behavior", staleCapture.scrollBehavior, staleCapture.scrollPriority);
+        else element.style.removeProperty("scroll-behavior");
+        if (!staleCapture.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+      }
     }
     delete window.__kiritoriScrollCapture;
   }
@@ -1611,13 +1626,6 @@ function selectScrollableArea(jobId, labels) {
     }
     if (saved?.owner !== markerOwner || saved.version !== markerVersion) return null;
     return saved;
-  };
-
-  const restoreInlineStyle = (element, property, currentValue, savedValue, savedPriority, hadStyle) => {
-    if (element.style.getPropertyValue(property) !== currentValue || element.style.getPropertyPriority(property) !== importantPriority) return;
-    if (savedValue) element.style.setProperty(property, savedValue, savedPriority);
-    else element.style.removeProperty(property);
-    if (!hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
   };
 
   restoreSelectionMarkers();
@@ -2065,8 +2073,13 @@ function restoreScrollableArea(jobId) {
   function restoreStickyElement(element) {
     const saved = parseMarker(element.dataset.kiritoriScrollSticky);
     if (!isOwnedMarker(saved) || saved.jobId !== jobId) return;
-    restoreInlineStyle(element, "visibility", "hidden", saved.visibility, saved.visibilityPriority, saved.hadStyle);
-    restoreMarker(element, "kiritoriScrollSticky", saved.previousMarker);
+    if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
+      if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
+      else element.style.removeProperty("visibility");
+      if (!saved.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
+    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollSticky;
+    else element.dataset.kiritoriScrollSticky = saved.previousMarker;
   }
 
   function restoreSelectedArea(captureState) {
@@ -2074,11 +2087,16 @@ function restoreScrollableArea(jobId) {
     if (!element?.isConnected) return;
     element.scrollTop = captureState.originalTop;
     element.scrollLeft = captureState.originalLeft;
-    restoreInlineStyle(element, "scroll-behavior", "auto", captureState.scrollBehavior, captureState.scrollPriority, captureState.hadStyle);
+    if (element.style.getPropertyValue("scroll-behavior") === "auto" && element.style.getPropertyPriority("scroll-behavior") === "important") {
+      if (captureState.scrollBehavior) element.style.setProperty("scroll-behavior", captureState.scrollBehavior, captureState.scrollPriority);
+      else element.style.removeProperty("scroll-behavior");
+      if (!captureState.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    }
     if (!captureState.markerName) return;
     const saved = parseMarker(element.dataset.kiritoriScrollState);
     if (!isOwnedMarker(saved)) return;
-    restoreMarker(element, "kiritoriScrollState", saved.previousMarker);
+    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
+    else element.dataset.kiritoriScrollState = saved.previousMarker;
   }
 
   function parseMarker(value) {
@@ -2094,17 +2112,6 @@ function restoreScrollableArea(jobId) {
     return saved?.owner === "kiritori" && saved.version === 1;
   }
 
-  function restoreInlineStyle(element, property, currentValue, savedValue, savedPriority, hadStyle) {
-    if (element.style.getPropertyValue(property) !== currentValue || element.style.getPropertyPriority(property) !== "important") return;
-    if (savedValue) element.style.setProperty(property, savedValue, savedPriority);
-    else element.style.removeProperty(property);
-    if (!hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
-  }
-
-  function restoreMarker(element, key, previousMarker) {
-    if (previousMarker === null) delete element.dataset[key];
-    else element.dataset[key] = previousMarker;
-  }
 }
 function restoreManualHiddenElements(jobId) {
   if (window.__kiritoriManualHide?.jobId === jobId) window.__kiritoriManualHide.restore();
