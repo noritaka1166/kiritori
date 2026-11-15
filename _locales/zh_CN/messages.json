@@ -1087,5 +1087,11 @@
   },
   "pagination_page_number": {
     "message": "要显示的页码"
+  },
+  "destination_folder_path": {
+    "message": "保存到：$1"
+  },
+  "destination_folder_change": {
+    "message": "更改"
   }
 }

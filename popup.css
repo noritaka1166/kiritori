@@ -39,6 +39,9 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
 .settings-group[open] summary::after { margin-bottom: -3px; transform: rotate(225deg); }
 .settings-group-content { padding: 0 14px 14px; border-top: 1px solid #edf1f7; }
 .settings-group-content > .capture-setting:first-child { margin-top: 13px; }
+.destination-folder-summary { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; color: #52647c; font-size: 12px; }
+.destination-folder-summary span { min-width: 0; overflow-wrap: anywhere; }
+.destination-folder-summary button { flex: none; padding: 2px 4px; background: transparent; color: #185abc; font-size: 12px; }
 .folder-input { display: flex; align-items: center; gap: 7px; color: #68788f; white-space: nowrap; }
 .folder-input input { min-width: 0; }
 button { border: 0; border-radius: 8px; font: inherit; font-weight: 650; cursor: pointer; }

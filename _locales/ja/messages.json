@@ -1087,5 +1087,11 @@
   },
   "pagination_page_number": {
     "message": "表示するページ番号"
+  },
+  "destination_folder_path": {
+    "message": "保存先: $1"
+  },
+  "destination_folder_change": {
+    "message": "変更"
   }
 }

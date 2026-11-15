@@ -68,3 +68,12 @@ export function createSettingsStore(storage) {
     wait() { return pending.catch(() => undefined); }
   };
 }
+
+export function normalizeFolder(value) {
+  return String(value || "")
+    .split(/[\\/]+/)
+    .filter((part) => part && part !== "." && part !== "..")
+    .map((part) => part.replace(/[<>:"|?*\u0000-\u001f]/g, "_").trim())
+    .filter(Boolean)
+    .join("/");
+}

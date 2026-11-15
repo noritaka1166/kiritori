@@ -1,4 +1,4 @@
-import { normalizeCaptureDelay } from "./popup-settings.js";
+import { normalizeCaptureDelay, normalizeFolder } from "./popup-settings.js";
 import { downloadFile } from "./download-files.js";
 import { validateScrollableAreaBounds, validatePaginatedScrollPosition } from "./capture-validation.js";
 import "./i18n.js";
@@ -1231,15 +1231,6 @@ async function updatePaginatedScrollTarget(tab, job, scope, actualY, metrics) {
   }
   return { completed: false, targetY, actualY };
 }
-function normalizeFolder(value) {
-  return String(value || "")
-    .split(/[\\/]+/)
-    .filter((part) => part && part !== "." && part !== "..")
-    .map((part) => part.replace(/[<>:"|?*\u0000-\u001f]/g, "_").trim())
-    .filter(Boolean)
-    .join("/");
-}
-
 function trimFilenameEnding(value) {
   let end = value.length;
   while (end > 0 && (value[end - 1] === "." || value[end - 1] === " ")) end -= 1;

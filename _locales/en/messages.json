@@ -1087,5 +1087,11 @@
   },
   "pagination_page_number": {
     "message": "Page number to display"
+  },
+  "destination_folder_path": {
+    "message": "Save to: $1"
+  },
+  "destination_folder_change": {
+    "message": "Change"
   }
 }

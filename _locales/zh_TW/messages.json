@@ -1087,5 +1087,11 @@
   },
   "pagination_page_number": {
     "message": "要顯示的頁碼"
+  },
+  "destination_folder_path": {
+    "message": "儲存位置：$1"
+  },
+  "destination_folder_change": {
+    "message": "變更"
   }
 }

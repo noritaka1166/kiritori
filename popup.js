@@ -1,7 +1,7 @@
 import { capturePageRestriction } from "./capture-availability.js";
 import { createCaptureStatusTracker } from "./capture-status.js";
 import { shouldShowCaptureProgress, getProgressMessage } from "./popup-progress.js";
-import { defaults, siteKey, createSettingsStore, normalizeCaptureDelay, normalizePaginationLimit, normalizePaginationWait, normalizeMaxFrames, normalizeScrollWait } from "./popup-settings.js";
+import { defaults, siteKey, createSettingsStore, normalizeFolder, normalizeCaptureDelay, normalizePaginationLimit, normalizePaginationWait, normalizeMaxFrames, normalizeScrollWait } from "./popup-settings.js";
 
 kiriLocalizeDocument();
 // Chrome sizes extension popups from their content. Wait until that sizing settles
@@ -119,6 +119,9 @@ const removeAds = document.querySelector("#remove-ads");
 const manualHide = document.querySelector("#manual-hide");
 const previewEdit = document.querySelector("#preview-edit");
 const folderRow = document.querySelector("#folder-row");
+const destinationFolderSummary = document.querySelector("#destination-folder-summary");
+const destinationFolderPath = document.querySelector("#destination-folder-path");
+const changeDestinationFolder = document.querySelector("#change-destination-folder");
 const captureButton = document.querySelector("#capture");
 const captureAvailability = document.querySelector("#capture-availability");
 let captureRestricted = false;
@@ -417,6 +420,9 @@ function updateControls() {
   }
   if ((isPdf || isPagination) && destination.value !== "save") destination.value = "save";
   folderRow.hidden = destination.value === "copy";
+  destinationFolderSummary.hidden = destination.value === "copy";
+  const folderPath = normalizeFolder(folder.value);
+  destinationFolderPath.textContent = kiriT("保存先: $1", folderPath ? `Downloads / ${folderPath}` : "Downloads");
   splitSetting.hidden = !["full", "scroll-area"].includes(mode.value) || destination.value === "copy";
 }
 
@@ -433,7 +439,13 @@ splitOutput.addEventListener("change", persistSettingsFromControls);
 scrollSpeed.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
 scrollWaitInput.addEventListener("change", () => { scrollWaitInput.value = normalizeScrollWait(scrollWaitInput.value, { emptyIsDefault: true }); persistSettingsFromControls(); });
 maxFramesInput.addEventListener("change", () => { maxFramesInput.value = normalizeMaxFrames(maxFramesInput.value); persistSettingsFromControls(); });
+folder.addEventListener("input", updateControls);
 folder.addEventListener("change", persistSettingsFromControls);
+changeDestinationFolder.addEventListener("click", () => {
+  document.querySelector("#advanced-settings").open = true;
+  folder.focus();
+  folder.scrollIntoView({ block: "nearest" });
+});
 removeAds.addEventListener("change", persistSettingsFromControls);
 manualHide.addEventListener("change", persistSettingsFromControls);
 previewEdit.addEventListener("change", persistSettingsFromControls);
