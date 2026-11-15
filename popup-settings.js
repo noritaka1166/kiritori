@@ -16,7 +16,7 @@ export const normalizePaginationWait = (value) => clampInteger(value, 500, 10000
 export const normalizeMaxFrames = (value) => clampInteger(value, 1, 200, defaults.maxFrames);
 
 export function normalizeScrollWait(value, { emptyIsDefault = false } = {}) {
-  const wait = emptyIsDefault && value === "" ? NaN : Number(value);
+  const wait = emptyIsDefault && value === "" ? Number.NaN : Number(value);
   return Math.min(10000, Math.max(0, Number.isFinite(wait) ? Math.floor(wait) : defaults.scrollWaitMs));
 }
 
