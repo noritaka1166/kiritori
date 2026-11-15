@@ -20,7 +20,10 @@ export async function downloadFile(downloads, options) {
     const item = items[0];
     if (!item) throw new Error("ダウンロードの状態を確認できませんでした。");
     const result = early || (item.state === "complete" || item.state === "interrupted" ? item : await completion);
-    if (result.state !== "complete") throw new Error(`ダウンロードに失敗しました。${result.error ? ` (${result.error})` : ""}`);
+    if (result.state !== "complete") {
+      const detail = result.error ? ` (${result.error})` : "";
+      throw new Error(`ダウンロードに失敗しました。${detail}`);
+    }
   } finally {
     downloads.onChanged.removeListener(listener);
   }
