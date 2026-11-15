@@ -126,5 +126,11 @@ try {
 } catch (error) {
   statusOutput.textContent = kiriT(error?.message || "画像を読み込めませんでした。");
   terminal = true; clearInterval(heartbeat); cancel.disabled = false; cancel.textContent = kiriT("閉じる");
-  if (jobId) chrome.runtime.sendMessage({ type: "capture:cancel", jobId }).catch(() => undefined);
+  if (jobId) {
+    try {
+      await chrome.runtime.sendMessage({ type: "capture:cancel", jobId });
+    } catch (_) {
+      // The editor is already closing, so cancellation is best effort.
+    }
+  }
 }
