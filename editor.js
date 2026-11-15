@@ -21,6 +21,8 @@ const savedColorsElement = document.querySelector("#saved-colors");
 const saveColorButton = document.querySelector("#save-color");
 const paletteStatus = document.querySelector("#palette-status");
 const sizeInput = document.querySelector("#size");
+const sizeLabel = document.querySelector("#size-label");
+const palettePanel = document.querySelector("#palette-panel");
 const mosaicBlockInput = document.querySelector("#mosaic-block");
 const mosaicBlockLabel = document.querySelector("#mosaic-block-label");
 const inlineText = document.querySelector("#inline-text");
@@ -229,13 +231,23 @@ const labels = {
 function currentState() { return history.at(-1); }
 function cloneState() { return structuredClone(currentState()); }
 
+function updateToolSettings() {
+  const sizedTools = ["arrow", "line", "rect", "ellipse", "number", "text"];
+  const coloredTools = [...sizedTools, "redact", "marker"];
+  sizeLabel.hidden = !sizedTools.includes(tool);
+  mosaicBlockLabel.hidden = tool !== "mosaic";
+  const selected = tool === "select" && selectedIndex !== null && history.length
+    ? selectedObject(currentState()) : null;
+  palettePanel.hidden = !coloredTools.includes(tool) && !selected;
+}
+
 function selectTool(next) {
   if (inlineEdit) finishInlineText();
   cancelDragPreview();
   drag = null;
   clearOverlay();
   tool = next;
-  mosaicBlockLabel.hidden = tool !== "mosaic";
+  updateToolSettings();
   if (next !== "select") selectedIndex = null;
   for (const button of toolButtons) button.setAttribute("aria-pressed", String(button.dataset.tool === tool));
   hint.textContent = labels[tool];
@@ -465,6 +477,7 @@ function renderShapeSelection(item, crop, radius) {
 }
 
 function renderObjectSelection(state) {
+  updateToolSettings();
   if (inlineEdit) {
     hideObjectSelection();
     return;
