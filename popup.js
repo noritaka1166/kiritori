@@ -18,6 +18,7 @@ window.addEventListener("resize", schedulePopupSizing);
 schedulePopupSizing();
 const draftRetention = document.querySelector("#draft-retention");
 const draftList = document.querySelector("#draft-list");
+const draftSearch = document.querySelector("#draft-search");
 const draftListStatus = document.querySelector("#draft-list-status");
 const draftClear = document.querySelector("#draft-clear");
 const draftClearDialog = document.querySelector("#draft-clear-dialog");
@@ -27,13 +28,23 @@ const draftClearTitle = document.querySelector("#draft-clear-title");
 const draftClearDescription = document.querySelector("#draft-clear-description");
 let draftToDelete = null;
 let draftDb;
+let savedDrafts = [];
 async function refreshDrafts() {
   if (!draftDb) return;
   try {
     await draftDb.deleteExpired();
-    const drafts = (await draftDb.list()).sort((a,b) => b.updatedAt - a.updatedAt);
-    draftList.replaceChildren(); draftClear.hidden = drafts.length === 0;
-    draftListStatus.textContent = drafts.length ? kiriT("保存された下書き") : kiriT("保存された下書きはありません。");
+    savedDrafts = (await draftDb.list()).sort((a,b) => b.updatedAt - a.updatedAt);
+    renderDrafts();
+  } catch (error) {
+    console.error("下書きを読み込めませんでした。", error);
+    draftListStatus.textContent = kiriT("下書きを読み込めませんでした。");
+  }
+}
+function renderDrafts() {
+    const query = draftSearch.value.trim().toLocaleLowerCase();
+    const drafts = savedDrafts.filter(draft => String(draft.meta?.title || "KiriTori").toLocaleLowerCase().includes(query));
+    draftList.replaceChildren(); draftClear.hidden = savedDrafts.length === 0;
+    draftListStatus.textContent = !savedDrafts.length ? kiriT("保存された下書きはありません。") : !drafts.length ? kiriT("一致する下書きはありません。") : query ? kiriT("$1件の下書きが見つかりました。", drafts.length) : kiriT("保存された下書き");
     for (const draft of drafts) {
       const row = document.createElement("div"); row.className = "draft-row";
       const title = document.createElement("div"); title.className = "draft-title"; title.textContent = draft.meta?.title || "KiriTori";
@@ -51,11 +62,8 @@ async function refreshDrafts() {
       });
       actions.append(open, remove); row.append(title, date, actions); draftList.append(row);
     }
-  } catch (error) {
-    console.error("下書きを読み込めませんでした。", error);
-    draftListStatus.textContent = kiriT("下書きを読み込めませんでした。");
-  }
 }
+draftSearch.addEventListener("input", renderDrafts);
 draftRetention.addEventListener("change", async () => {
   try { await chrome.storage.local.set({ draftRetentionDays: Number(draftRetention.value) }); }
   catch (error) {

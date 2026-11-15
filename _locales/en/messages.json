@@ -1096,5 +1096,14 @@
   },
   "editor_image_workspace": {
     "message": "Image editing area"
+  },
+  "draft_search_label": {
+    "message": "Search drafts by page title"
+  },
+  "draft_search_empty": {
+    "message": "No matching drafts."
+  },
+  "draft_search_count": {
+    "message": "Found $1 drafts."
   }
 }

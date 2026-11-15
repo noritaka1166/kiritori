@@ -1096,5 +1096,14 @@
   },
   "editor_image_workspace": {
     "message": "图像编辑区域"
+  },
+  "draft_search_label": {
+    "message": "按页面标题搜索草稿"
+  },
+  "draft_search_empty": {
+    "message": "没有匹配的草稿。"
+  },
+  "draft_search_count": {
+    "message": "找到 $1 条草稿。"
   }
 }

@@ -1096,5 +1096,14 @@
   },
   "editor_image_workspace": {
     "message": "画像編集エリア"
+  },
+  "draft_search_label": {
+    "message": "ページ名で下書きを検索"
+  },
+  "draft_search_empty": {
+    "message": "一致する下書きはありません。"
+  },
+  "draft_search_count": {
+    "message": "$1件の下書きが見つかりました。"
   }
 }

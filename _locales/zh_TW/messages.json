@@ -1096,5 +1096,14 @@
   },
   "editor_image_workspace": {
     "message": "影像編輯區域"
+  },
+  "draft_search_label": {
+    "message": "依頁面標題搜尋草稿"
+  },
+  "draft_search_empty": {
+    "message": "沒有符合的草稿。"
+  },
+  "draft_search_count": {
+    "message": "找到 $1 筆草稿。"
   }
 }
