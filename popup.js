@@ -1,3 +1,4 @@
+import { createCaptureStatusTracker } from "./capture-status.js";
 import { shouldShowCaptureProgress, getProgressMessage } from "./popup-progress.js";
 import { defaults, siteKey, createSettingsStore, normalizePaginationLimit, normalizePaginationWait, normalizeMaxFrames, normalizeScrollWait } from "./popup-settings.js";
 
@@ -108,8 +109,7 @@ const settingsStore = createSettingsStore(chrome.storage.local);
 let settingsLoaded = false;
 let captureBusy = false;
 let startPending = false;
-let latestJobId = null;
-let latestRevision = 0;
+const captureStatusTracker = createCaptureStatusTracker();
 let failureRequest = 0;
 captureButton.disabled = true;
 
@@ -165,18 +165,8 @@ function updateCaptureButton() {
   captureButton.disabled = !settingsLoaded || captureBusy || startPending;
 }
 
-function acceptCaptureStatus(captureStatus) {
-  if (captureStatus?.jobId && captureStatus.jobId !== latestJobId) {
-    latestJobId = captureStatus.jobId;
-    latestRevision = 0;
-  }
-  if (captureStatus?.revision && captureStatus.revision < latestRevision) return false;
-  if (captureStatus?.revision) latestRevision = captureStatus.revision;
-  return true;
-}
-
 function renderCaptureStatus(captureStatus) {
-  if (!acceptCaptureStatus(captureStatus)) return;
+  if (!captureStatusTracker.accept(captureStatus)) return;
   captureBusy = Boolean(captureStatus?.active);
   const showProgress = shouldShowCaptureProgress(captureStatus);
   progressPanel.hidden = !showProgress;
@@ -201,12 +191,12 @@ function renderInactiveCaptureStatus(captureStatus) {
 }
 
 async function refreshCaptureStatus() {
-  const requestedJobId = latestJobId;
-  const requestedRevision = latestRevision;
+  const requested = captureStatusTracker.current();
   try {
     const response = await chrome.runtime.sendMessage({ type: "capture:status" });
     if (response?.ok) {
-      if (!response.status && (latestJobId !== requestedJobId || latestRevision !== requestedRevision)) return;
+      const current = captureStatusTracker.current();
+      if (current.jobId !== requested.jobId || current.revision !== requested.revision) return;
       renderCaptureStatus(response.status);
     }
   } catch (error) {

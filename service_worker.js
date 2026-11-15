@@ -1,3 +1,4 @@
+import { downloadFile } from "./download-files.js";
 import { validateScrollableAreaBounds, validatePaginatedScrollPosition } from "./capture-validation.js";
 import "./i18n.js";
 import { draftStore } from "./draft-store.js";
@@ -964,13 +965,16 @@ async function saveCaptureFiles(options, files) {
     await offscreenMessage({ type: "release", urls: files.map((file) => file.url) });
     return 0;
   }
-  const folderPath = normalizeFolder(options.folder);
-  return files.reduce((saving, file) => saving.then(async (saved) => {
-    const filename = [folderPath, `${options.fileStem}${file.suffix}`].filter(Boolean).join("/");
-    const downloadId = await chrome.downloads.download({ url: file.url, filename, conflictAction: "uniquify", saveAs: false });
-    releaseUrlAfterDownload(downloadId, file.url);
-    return saved + 1;
-  }), Promise.resolve(0));
+  const folder = normalizeFolder(options.folder);
+  try {
+    for (const file of files) {
+      const filename = [folder, `${options.fileStem}${file.suffix}`].filter(Boolean).join("/");
+      await downloadFile(chrome.downloads, { url: file.url, filename, conflictAction: "uniquify", saveAs: false });
+    }
+    return files.length;
+  } finally {
+    await offscreenMessage({ type: "release", urls: files.map((file) => file.url) }).catch(() => undefined);
+  }
 }
 async function openCaptureEditor(job, options, previewUrl, meta, preview = null) {
   const choice = new Promise((resolve) => { job.editorResolve = resolve; });
@@ -1014,26 +1018,12 @@ async function exportRecoveredDraft(id, url) {
     await offscreenMessage({ type: "replace-image", url });
     const artifact = await offscreenMessage({ type: "finish" });
     const copied = await copyCaptureArtifact(options, artifact);
-    const saved = await saveRecoveredDraftFiles(options, artifact.files);
+    const saved = await saveCaptureFiles(options, artifact.files);
     return successMessage(options, saved, copied);
   } catch (error) {
     await offscreenMessage({ type: "discard" }).catch(() => undefined);
     throw error;
   } finally { reportCapture(job, { active: false, cancellable: false }); if (activeCapture === job) activeCapture = null; }
-}
-
-async function saveRecoveredDraftFiles(options, files) {
-  if (options.destination !== "save" && options.destination !== "both") {
-    await offscreenMessage({ type: "release", urls: files.map((file) => file.url) });
-    return 0;
-  }
-  const folder = normalizeFolder(options.folder);
-  return files.reduce((saving, file) => saving.then(async (saved) => {
-    const filename = [folder, `${options.fileStem}${file.suffix}`].filter(Boolean).join("/");
-    const downloadId = await chrome.downloads.download({ url: file.url, filename, conflictAction: "uniquify", saveAs: false });
-    releaseUrlAfterDownload(downloadId, file.url);
-    return saved + 1;
-  }), Promise.resolve(0));
 }
 
 async function runQuickCapture(tab, modeOverride) {
@@ -1267,17 +1257,6 @@ function makeFileStem(meta, pattern = "title-date", date = new Date()) {
   if (pattern === "date-site-title") return `${stamp}_${site}_${title}`;
   if (pattern === "site-date-title") return `${site}_${stamp}_${title}`;
   return `${title}_${stamp}`;
-}
-
-function releaseUrlAfterDownload(downloadId, url) {
-  const listener = (delta) => {
-    if (delta.id !== downloadId) return;
-    const state = delta.state?.current;
-    if (state !== "complete" && state !== "interrupted") return;
-    chrome.downloads.onChanged.removeListener(listener);
-    offscreenMessage({ type: "release", urls: [url] }).catch(() => undefined);
-  };
-  chrome.downloads.onChanged.addListener(listener);
 }
 
 function successMessage(options, saved, copied) {
