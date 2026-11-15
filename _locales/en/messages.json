@@ -1075,5 +1075,11 @@
   },
   "pagination_advanced_settings": {
     "message": "Pagination settings"
+  },
+  "pagination_zoom_relative": {
+    "message": "Zoom (relative to fit width)"
+  },
+  "pagination_zoom_fit": {
+    "message": "Fit to width (100%)"
   }
 }

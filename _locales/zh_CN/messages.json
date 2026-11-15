@@ -1075,5 +1075,11 @@
   },
   "pagination_advanced_settings": {
     "message": "翻页详细设置"
+  },
+  "pagination_zoom_relative": {
+    "message": "显示比例（以适合宽度为基准）"
+  },
+  "pagination_zoom_fit": {
+    "message": "适合宽度（100%）"
   }
 }

@@ -1075,5 +1075,11 @@
   },
   "pagination_advanced_settings": {
     "message": "翻頁進階設定"
+  },
+  "pagination_zoom_relative": {
+    "message": "顯示比例（以符合寬度為基準）"
+  },
+  "pagination_zoom_fit": {
+    "message": "符合寬度（100%）"
   }
 }

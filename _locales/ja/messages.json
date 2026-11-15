@@ -1075,5 +1075,11 @@
   },
   "pagination_advanced_settings": {
     "message": "ページ送りの詳細設定"
+  },
+  "pagination_zoom_relative": {
+    "message": "表示倍率（画面に合わせた幅が基準）"
+  },
+  "pagination_zoom_fit": {
+    "message": "画面に合わせる（100%）"
   }
 }
