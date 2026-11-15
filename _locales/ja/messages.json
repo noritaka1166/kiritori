@@ -1057,5 +1057,11 @@
   },
   "pagination_preview_image": {
     "message": "プレビュー画像"
+  },
+  "draft_delete_title": {
+    "message": "下書きを削除しますか？"
+  },
+  "draft_delete_description": {
+    "message": "「$1」を削除します。この操作は取り消せません。"
   }
 }

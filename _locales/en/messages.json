@@ -1057,5 +1057,11 @@
   },
   "pagination_preview_image": {
     "message": "Preview images"
+  },
+  "draft_delete_title": {
+    "message": "Delete this draft?"
+  },
+  "draft_delete_description": {
+    "message": "Delete “$1”? This cannot be undone."
   }
 }

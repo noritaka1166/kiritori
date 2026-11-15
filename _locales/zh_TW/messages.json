@@ -1057,5 +1057,11 @@
   },
   "pagination_preview_image": {
     "message": "預覽影像"
+  },
+  "draft_delete_title": {
+    "message": "刪除此草稿？"
+  },
+  "draft_delete_description": {
+    "message": "將刪除「$1」。此操作無法復原。"
   }
 }

@@ -1057,5 +1057,11 @@
   },
   "pagination_preview_image": {
     "message": "预览图像"
+  },
+  "draft_delete_title": {
+    "message": "删除此草稿？"
+  },
+  "draft_delete_description": {
+    "message": "将删除“$1”。此操作无法撤销。"
   }
 }

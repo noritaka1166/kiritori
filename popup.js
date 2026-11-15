@@ -22,6 +22,9 @@ const draftClear = document.querySelector("#draft-clear");
 const draftClearDialog = document.querySelector("#draft-clear-dialog");
 const draftClearCancel = document.querySelector("#draft-clear-cancel");
 const draftClearConfirm = document.querySelector("#draft-clear-confirm");
+const draftClearTitle = document.querySelector("#draft-clear-title");
+const draftClearDescription = document.querySelector("#draft-clear-description");
+let draftToDelete = null;
 let draftDb;
 async function refreshDrafts() {
   if (!draftDb) return;
@@ -36,14 +39,12 @@ async function refreshDrafts() {
       const open = document.createElement("button"); open.className = "draft-open"; open.type = "button"; open.textContent = kiriT("復元");
       open.addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL(`editor.html?draft=${encodeURIComponent(draft.id)}`) }));
       const remove = document.createElement("button"); remove.className = "draft-remove"; remove.type = "button"; remove.textContent = kiriT("削除");
-      remove.addEventListener("click", async () => {
-        try {
-          await draftDb.delete(draft.id);
-          await refreshDrafts();
-        } catch (error) {
-          console.error("下書きを削除できませんでした。", error);
-          draftListStatus.textContent = kiriT("下書きを削除できませんでした。");
-        }
+      remove.addEventListener("click", () => {
+        draftToDelete = draft.id;
+        draftClearTitle.textContent = kiriT("下書きを削除しますか？");
+        draftClearDescription.textContent = kiriT("「$1」を削除します。この操作は取り消せません。", draft.meta?.title || "KiriTori");
+        draftClearConfirm.textContent = kiriT("削除");
+        draftClearDialog.showModal();
       });
       row.append(title, open, remove); draftList.append(row);
     }
@@ -60,7 +61,12 @@ draftRetention.addEventListener("change", async () => {
   }
 });
 draftClear.addEventListener("click", () => {
-  if (draftDb) draftClearDialog.showModal();
+  if (!draftDb) return;
+  draftToDelete = null;
+  draftClearTitle.textContent = kiriT("下書きをすべて削除しますか？");
+  draftClearDescription.textContent = kiriT("保存された下書きはすべて削除され、復元できません。");
+  draftClearConfirm.textContent = kiriT("すべて削除");
+  draftClearDialog.showModal();
 });
 draftClearCancel.addEventListener("click", () => draftClearDialog.close());
 draftClearDialog.addEventListener("cancel", (event) => { if (draftClearConfirm.disabled) event.preventDefault(); });
@@ -69,7 +75,8 @@ draftClearConfirm.addEventListener("click", async () => {
   draftClearConfirm.disabled = true;
   draftClearCancel.disabled = true;
   try {
-    await draftDb.clear();
+    if (draftToDelete === null) await draftDb.clear();
+    else await draftDb.delete(draftToDelete);
     draftClearDialog.close();
     await refreshDrafts();
   } catch (error) {
