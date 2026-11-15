@@ -97,6 +97,7 @@ const format = document.querySelector("#output-format");
 const paginationSetting = document.querySelector("#pagination-setting");
 const paginationLimit = document.querySelector("#pagination-limit");
 const paginationScope = document.querySelector("#pagination-scope");
+const paginationAreaNote = document.querySelector("#pagination-area-note");
 const paginationWait = document.querySelector("#pagination-wait");
 const captureDelay = document.querySelector("#capture-delay");
 const captureDelayCustom = document.querySelector("#capture-delay-custom");
@@ -388,6 +389,7 @@ function updateControls() {
   const isPdf = format.value === "pdf";
   const isPagination = mode.value === "pagination";
   paginationSetting.hidden = !isPagination;
+  paginationAreaNote.hidden = paginationScope.value !== "scroll-area";
   captureDelayCustom.hidden = captureDelay.value !== "custom";
   document.querySelector("#capture-delay-note").hidden = captureDelay.value === "0";
   previewEdit.disabled = false;

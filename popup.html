@@ -40,11 +40,14 @@
           <option value="full">ページ全体をスクロール</option>
           <option value="scroll-area">スクロール領域を選択</option>
         </select>
-        <p class="note">スクロール領域は最初に選びます。ページが変わって領域を特定できなくなった場合は、そこまでの画像を出力します。</p>
+        <p id="pagination-area-note" class="note" hidden>スクロール領域は最初に選びます。ページが変わって領域を特定できなくなった場合は、そこまでの画像を出力します。</p>
+        <details class="pagination-details">
+          <summary>ページ送りの詳細設定</summary>
         <label for="pagination-limit">撮影ページ数の上限</label>
         <input id="pagination-limit" type="number" min="1" max="50" value="20">
         <label for="pagination-wait">ページ送り後の待ち時間（ミリ秒）</label>
         <input id="pagination-wait" type="number" min="500" max="10000" step="100" value="1500">
+        </details>
       </section>
       <label for="capture-delay">撮影前の待ち時間</label>
       <select id="capture-delay">

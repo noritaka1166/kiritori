@@ -1072,5 +1072,8 @@
   },
   "capture_restricted_file": {
     "message": "To capture local files, allow access to file URLs in the extension settings."
+  },
+  "pagination_advanced_settings": {
+    "message": "Pagination settings"
   }
 }

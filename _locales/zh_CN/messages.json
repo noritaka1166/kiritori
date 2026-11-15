@@ -1072,5 +1072,8 @@
   },
   "capture_restricted_file": {
     "message": "要截取本地文件，请在扩展程序设置中允许访问文件网址。"
+  },
+  "pagination_advanced_settings": {
+    "message": "翻页详细设置"
   }
 }

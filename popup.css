@@ -24,6 +24,8 @@ select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-v
 .note, .failure-note, .failure-meta { color: #52647c; font-size: 12.5px; line-height: 1.5; }
 .note { margin: 7px 0 0; }
 .capture-setting { margin-top: 14px; }
+.pagination-details { margin-top: 10px; }
+.pagination-details summary { color: #37527a; font-size: 13px; font-weight: 650; cursor: pointer; }
 .toggle { display: flex; align-items: flex-start; gap: 9px; margin: 0; cursor: pointer; line-height: 1.4; }
 .toggle input { width: 16px; height: 16px; min-height: 16px; margin: 1px 0 0; padding: 0; flex: none; accent-color: #285be6; }
 .toggle input:disabled + span { color: #94a3b8; }

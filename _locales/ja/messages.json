@@ -1072,5 +1072,8 @@
   },
   "capture_restricted_file": {
     "message": "ローカルファイルを撮影するには、拡張機能の設定でファイルのURLへのアクセスを許可してください。"
+  },
+  "pagination_advanced_settings": {
+    "message": "ページ送りの詳細設定"
   }
 }
