@@ -337,7 +337,7 @@ async function finishCapture() {
   return finishRegularCapture();
 }
 
-function finishPaginationBundle() {
+async function finishPaginationBundle() {
   const { pages, options } = paginationBundle;
   const files = [];
   const finish = () => {
@@ -350,19 +350,23 @@ function finishPaginationBundle() {
     throw error;
   };
 
-  if (options.format === "pdf") {
-    return makePdf(null, null, pages)
-      .then((blob) => files.push({ suffix: ".pdf", url: makeObjectUrl(blob) }))
-      .then(finish, cleanup);
-  }
+  try {
+    if (options.format === "pdf") {
+      const blob = await makePdf(null, null, pages);
+      files.push({ suffix: ".pdf", url: makeObjectUrl(blob) });
+    } else {
+      const type = options.format === "png" ? "image/png" : "image/jpeg";
+      const extension = options.format === "png" ? ".png" : ".jpg";
+      for (const [index, page] of pages.entries()) {
+        const blob = await canvasBlob(page, type, .92);
+        files.push({ suffix: `_${String(index + 1).padStart(3, "0")}${extension}`, url: makeObjectUrl(blob) });
+      }
+    }
 
-  const type = options.format === "png" ? "image/png" : "image/jpeg";
-  const extension = options.format === "png" ? ".png" : ".jpg";
-  return pages.reduce((sequence, page, index) => sequence.then(() =>
-    canvasBlob(page, type, .92).then((blob) => {
-      files.push({ suffix: `_${String(index + 1).padStart(3, "0")}${extension}`, url: makeObjectUrl(blob) });
-    })
-  ), Promise.resolve()).then(finish, cleanup);
+    return finish();
+  } catch (error) {
+    return cleanup(error);
+  }
 }
 
 async function finishRegularCapture() {
