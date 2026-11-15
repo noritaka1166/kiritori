@@ -1,3 +1,5 @@
+import { closeCaptureView } from "./capture-view.js";
+
 kiriLocalizeDocument();
 const jobId = new URLSearchParams(location.search).get("job");
 const pages = document.querySelector("#pages");
@@ -57,30 +59,10 @@ cancel.addEventListener("click", handleCancelClick);
 
 async function handleCancelClick() {
   if (terminal) {
-    await closePreview();
+    await closeCaptureView(data?.sourceTabId);
     return;
   }
   await cancelCapture();
-}
-
-async function closePreview() {
-  await restoreSourceTab();
-  try {
-    const tab = await chrome.tabs.getCurrent();
-    if (tab?.id) await chrome.tabs.remove(tab.id);
-    else window.close();
-  } catch (error) {
-    console.warn("プレビュータブを閉じられないため、ウィンドウを閉じます。", error);
-    window.close();
-  }
-}
-
-async function restoreSourceTab() {
-  if (!Number.isInteger(data?.sourceTabId)) return;
-  try {
-    const source = await chrome.tabs.update(data.sourceTabId, { active: true });
-    if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
-  } catch (_) { /* 元タブが閉じられていても、プレビューを閉じる処理は続けます。 */ }
 }
 
 async function cancelCapture() {

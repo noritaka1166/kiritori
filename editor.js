@@ -1,3 +1,4 @@
+import { closeCaptureView } from "./capture-view.js";
 import { createAnnotationTools } from "./editor-annotations.js";
 
 kiriLocalizeDocument();
@@ -910,30 +911,6 @@ exportButton.addEventListener("click", async () => {
   }
 });
 
-async function focusSourceTab() {
-  if (!Number.isInteger(sourceTabId)) return;
-  try {
-    const source = await chrome.tabs.update(sourceTabId, { active: true });
-    if (source?.windowId != null) await chrome.windows.update(source.windowId, { focused: true });
-  } catch (_) { /* The source tab may have been closed. */ }
-}
-
-async function closeEditorTab() {
-  try {
-    const tab = await chrome.tabs.getCurrent();
-    if (tab?.id) await chrome.tabs.remove(tab.id);
-    else window.close();
-  } catch (error) {
-    console.warn("Could not remove the editor tab; closing the window instead.", error);
-    window.close();
-  }
-}
-
-async function closeEditorAndRestoreSource() {
-  await focusSourceTab();
-  await closeEditorTab();
-}
-
 async function cancelActiveCapture() {
   cancelButton.disabled = true;
   try {
@@ -949,7 +926,7 @@ async function cancelActiveCapture() {
 
 cancelButton.addEventListener("click", async () => {
   if (terminal || restoredDraftId) {
-    await closeEditorAndRestoreSource();
+    await closeCaptureView(sourceTabId);
     return;
   }
   await cancelActiveCapture();
