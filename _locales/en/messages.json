@@ -1084,5 +1084,8 @@
   },
   "capture_saving_progress": {
     "message": "Saved $2 of $1 files."
+  },
+  "pagination_page_number": {
+    "message": "Page number to display"
   }
 }

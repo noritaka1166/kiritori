@@ -18,7 +18,9 @@ button.primary:hover:not(:disabled) { background: #155ab6; }
 main { max-width: 1200px; margin: auto; padding: 20px; }
 .toolbar { justify-content: space-between; flex-wrap: wrap; }
 .pager { justify-content: center; }
-#counter { min-width: 90px; text-align: center; font-variant-numeric: tabular-nums; }
+#page-number { width: 64px; padding: 7px; border: 1px solid #c5cad2; border-radius: 7px; font: inherit; text-align: center; }
+#page-number:focus-visible { outline: 3px solid #9bbfff; outline-offset: 2px; }
+#counter { min-width: 38px; font-variant-numeric: tabular-nums; }
 #status, .warning { display: block; margin-block: 1em; font-size: 14px; line-height: 1.5; }
 .warning { padding: 10px 12px; background: #fff4d6; border-radius: 6px; }
 .zoom-control { display: flex; align-items: center; gap: 6px; font-size: 14px; }

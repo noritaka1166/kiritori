@@ -1084,5 +1084,8 @@
   },
   "capture_saving_progress": {
     "message": "已保存 $2 / $1 个文件。"
+  },
+  "pagination_page_number": {
+    "message": "要显示的页码"
   }
 }

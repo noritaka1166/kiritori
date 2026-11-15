@@ -13,6 +13,7 @@ const single = document.querySelector("#single");
 const stacked = document.querySelector("#stacked");
 const pager = document.querySelector("#pager");
 const counter = document.querySelector("#counter");
+const pageNumber = document.querySelector("#page-number");
 const previewZoom = document.querySelector("#preview-zoom");
 let port, heartbeat, data, current = 0, mode = "single", submitted = false, terminal = false;
 
@@ -24,7 +25,10 @@ function render() {
   pager.hidden = displayMode !== "single";
   previous.disabled = current === 0;
   next.disabled = current >= data.pagination.count - 1;
-  counter.textContent = `${current + 1} / ${data.pagination.count}`;
+  pageNumber.disabled = false;
+  pageNumber.max = String(data.pagination.count);
+  pageNumber.value = String(current + 1);
+  counter.textContent = `/ ${data.pagination.count}`;
   const indices = displayMode === "single" ? [current] : Array.from({ length: data.pagination.count }, (_, index) => index);
   const fragment = document.createDocumentFragment();
   for (const index of indices) {
@@ -44,6 +48,18 @@ previewZoom.addEventListener("change", () => {
   const scale = Number(previewZoom.value) / 100;
   pages.style.setProperty("--preview-width", `${scale * 100}%`);
   pages.style.setProperty("--preview-max-width", `${scale * 1000}px`);
+});
+function goToPage() {
+  if (!data) return;
+  const value = Number(pageNumber.value);
+  if (pageNumber.value !== "" && Number.isFinite(value)) {
+    current = Math.min(data.pagination.count, Math.max(1, Math.floor(value))) - 1;
+  }
+  render();
+}
+pageNumber.addEventListener("change", goToPage);
+pageNumber.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.isComposing) { event.preventDefault(); goToPage(); }
 });
 single.addEventListener("click", () => { mode = "single"; render(); });
 stacked.addEventListener("click", () => { mode = "stacked"; render(); });
