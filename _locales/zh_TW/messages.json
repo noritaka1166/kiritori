@@ -1030,5 +1030,14 @@
   },
   "capture_mode_desc_pagination": {
     "message": "逐頁前進並擷取多個頁面。"
+  },
+  "editor_group_selection": {
+    "message": "選取與裁剪"
+  },
+  "editor_group_shapes": {
+    "message": "圖形與文字"
+  },
+  "editor_group_effects": {
+    "message": "模糊與強調"
   }
 }

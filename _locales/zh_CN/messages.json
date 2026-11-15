@@ -1030,5 +1030,14 @@
   },
   "capture_mode_desc_pagination": {
     "message": "逐页前进并截取多个页面。"
+  },
+  "editor_group_selection": {
+    "message": "选择与裁剪"
+  },
+  "editor_group_shapes": {
+    "message": "图形与文字"
+  },
+  "editor_group_effects": {
+    "message": "模糊与突出"
   }
 }

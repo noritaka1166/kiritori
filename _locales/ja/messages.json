@@ -1030,5 +1030,14 @@
   },
   "capture_mode_desc_pagination": {
     "message": "次のページに進みながら複数ページを撮影します。"
+  },
+  "editor_group_selection": {
+    "message": "選択・切り抜き"
+  },
+  "editor_group_shapes": {
+    "message": "図形・文字"
+  },
+  "editor_group_effects": {
+    "message": "ぼかし・強調"
   }
 }

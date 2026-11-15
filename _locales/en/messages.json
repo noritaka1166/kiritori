@@ -1030,5 +1030,14 @@
   },
   "capture_mode_desc_pagination": {
     "message": "Capture multiple pages while moving to the next page."
+  },
+  "editor_group_selection": {
+    "message": "Select & crop"
+  },
+  "editor_group_shapes": {
+    "message": "Shapes & text"
+  },
+  "editor_group_effects": {
+    "message": "Blur & highlight"
   }
 }

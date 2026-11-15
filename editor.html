@@ -18,20 +18,28 @@
     </header>
     <main>
       <section class="toolbar" aria-label="編集ツール">
+        <div class="tool-groups">
         <fieldset class="tools">
-          <legend class="visually-hidden">ツール</legend>
+          <legend>選択・切り抜き</legend>
           <button type="button" data-tool="select" aria-pressed="false">選択・調整</button>
           <button type="button" data-tool="crop" aria-pressed="true">切り抜き</button>
+        </fieldset>
+        <fieldset class="tools">
+          <legend>図形・文字</legend>
           <button type="button" data-tool="arrow" aria-pressed="false">矢印</button>
           <button type="button" data-tool="rect" aria-pressed="false">四角</button>
           <button type="button" data-tool="ellipse" aria-pressed="false">丸</button>
           <button type="button" data-tool="line" aria-pressed="false">直線</button>
           <button type="button" data-tool="number" aria-pressed="false">番号マーカー</button>
           <button type="button" data-tool="text" aria-pressed="false">文字</button>
+        </fieldset>
+        <fieldset class="tools">
+          <legend>ぼかし・強調</legend>
           <button type="button" data-tool="mosaic" aria-pressed="false">ぼかし</button>
           <button type="button" data-tool="redact" aria-pressed="false">塗りつぶし</button>
           <button type="button" data-tool="marker" aria-pressed="false">マーカー</button>
         </fieldset>
+        </div>
         <label>大きさ <input id="size" type="number" min="12" max="160" value="36"></label>
         <label id="mosaic-block-label" hidden>モザイクの粒度（px） <input id="mosaic-block" type="number" min="2" max="160" step="1" value="12"></label>
         <button id="undo" type="button" disabled>元に戻す</button>
