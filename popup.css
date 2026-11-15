@@ -14,6 +14,8 @@ h1 { margin: 0; color: #111e37; font-size: 19px; letter-spacing: -.03em; font-we
 header p { margin: 5px 0 0 42px; color: #718096; font-size: 12px; line-height: 1.4; }
 main { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 18px 20px; scrollbar-width: thin; scrollbar-color: #c5d0e2 transparent; }
 .section-heading { margin: 0 0 10px; color: #71809a; font-size: 12px; font-weight: 750; letter-spacing: .08em; }
+.output-settings { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 10px; }
+.output-settings select { text-overflow: ellipsis; }
 .primary-settings { padding: 1px 14px 14px; background: #fff; border: 1px solid #e3e9f3; border-radius: 13px; box-shadow: 0 2px 9px #263c6510; }
 label { display: block; margin: 13px 0 6px; color: #263750; font-weight: 650; }
 select, input { width: 100%; min-height: 42px; border: 1px solid #d8e0ed; border-radius: 8px; background: #f9fbff; color: #1e293b; font: inherit; font-size: 15px; padding: 7px 10px; }

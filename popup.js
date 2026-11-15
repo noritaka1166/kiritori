@@ -347,6 +347,7 @@ function updateControls() {
   const isPagination = mode.value === "pagination";
   paginationSetting.hidden = !isPagination;
   captureDelayCustom.hidden = captureDelay.value !== "custom";
+  document.querySelector("#capture-delay-note").hidden = captureDelay.value === "0";
   previewEdit.disabled = false;
   document.querySelector("#preview-label").textContent = isPagination ? kiriT("出力前にプレビュー") : kiriT("出力前にプレビュー・編集");
   document.querySelector("#preview-note").hidden = isPagination;

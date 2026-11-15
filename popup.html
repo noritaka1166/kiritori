@@ -56,7 +56,9 @@
         <label for="capture-delay-seconds">待ち時間（秒、1〜999）</label>
         <input id="capture-delay-seconds" type="number" min="1" max="999" step="1" value="10">
       </div>
-      <p class="note">待ち時間中にメニューやツールチップを表示できます。範囲選択などは待ち時間の後に始まります。</p>
+      <p id="capture-delay-note" class="note" hidden>待ち時間中にメニューやツールチップを表示できます。範囲選択などは待ち時間の後に始まります。</p>
+      <div class="output-settings">
+      <div>
       <label for="output-format">出力形式</label>
       <select id="output-format">
         <option value="png">PNG</option>
@@ -64,12 +66,16 @@
         <option value="pdf">PDF</option>
       </select>
 
+      </div>
+      <div>
       <label for="destination">出力先</label>
       <select id="destination">
         <option value="save">ファイルに保存</option>
         <option value="copy">クリップボードにコピー</option>
         <option value="both">保存してコピー</option>
       </select>
+      </div>
+      </div>
       </div>
       <div class="quick-options">
       <section class="capture-setting" aria-label="撮影オプション">
