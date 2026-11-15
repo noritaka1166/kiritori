@@ -1819,7 +1819,8 @@ function activatePaginationArea(jobId, locator) {
       const candidates = document.querySelectorAll(locator.fallback);
       el = candidates.length === 1 ? candidates[0] : null;
     }
-  } catch (_) {
+  } catch (error) {
+    if (error?.name !== "SyntaxError") throw error;
     // Page-provided selectors may become invalid after client-side navigation.
     return false;
   }
