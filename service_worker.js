@@ -967,10 +967,12 @@ async function saveCaptureFiles(options, files) {
   }
   const folder = normalizeFolder(options.folder);
   try {
-    for (const file of files) {
+    const results = await Promise.allSettled(files.map((file) => {
       const filename = [folder, `${options.fileStem}${file.suffix}`].filter(Boolean).join("/");
-      await downloadFile(chrome.downloads, { url: file.url, filename, conflictAction: "uniquify", saveAs: false });
-    }
+      return downloadFile(chrome.downloads, { url: file.url, filename, conflictAction: "uniquify", saveAs: false });
+    }));
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure) throw failure.reason;
     return files.length;
   } finally {
     await offscreenMessage({ type: "release", urls: files.map((file) => file.url) }).catch(() => undefined);
