@@ -1437,7 +1437,7 @@ async function selectElementsToHide(jobId, labels) {
   glass.addEventListener("wheel", (event) => {
     if (event.ctrlKey || event.metaKey) return;
     event.preventDefault();
-    const scale = getWheelScale(event.deltaMode);
+    const scale = [1, 16, window.innerHeight][event.deltaMode] ?? 1;
     window.scrollBy({ left: event.deltaX * scale, top: event.deltaY * scale, behavior: "instant" });
     parentHistory = []; showHighlight(null);
   }, { passive: false });
@@ -1624,12 +1624,6 @@ function selectScrollableArea(jobId, labels) {
   return createScrollableAreaPicker(jobId, labels);
 
   function createScrollableAreaPicker(jobId, labels) {
-    function getWheelScale(deltaMode) {
-      if (deltaMode === 1) return 16;
-      if (deltaMode === 2) return window.innerHeight;
-      return 1;
-    }
-
     const markerName = "data-kiritori-scroll-state";
     return new Promise((resolve) => {
       const host = document.createElement("div");
