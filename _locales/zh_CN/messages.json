@@ -1093,5 +1093,8 @@
   },
   "destination_folder_change": {
     "message": "更改"
+  },
+  "editor_image_workspace": {
+    "message": "图像编辑区域"
   }
 }

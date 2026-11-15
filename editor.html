@@ -81,7 +81,14 @@
       </section>
       <output id="draft-status" class="hint" aria-live="polite"></output>
       <output id="hint" class="hint" aria-live="polite">画像を読み込んでいます…</output>
-      <div id="workspace" class="workspace">
+      <label class="editor-zoom" for="editor-zoom">表示倍率（画面に合わせた幅が基準）
+        <select id="editor-zoom">
+          <option value="50">50%</option><option value="75">75%</option>
+          <option value="100" selected>画面に合わせる（100%）</option>
+          <option value="125">125%</option><option value="150">150%</option><option value="200">200%</option>
+        </select>
+      </label>
+      <div id="workspace" class="workspace" tabindex="0" aria-label="画像編集エリア">
         <div id="canvas-wrap" class="canvas-wrap">
           <canvas id="canvas" aria-label="撮影画像のプレビュー"></canvas>
           <input id="inline-text" type="text" maxlength="200" aria-label="画像に入れる文字" autocomplete="off" hidden>

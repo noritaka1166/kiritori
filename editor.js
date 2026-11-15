@@ -7,6 +7,8 @@ const jobId = new URLSearchParams(location.search).get("job");
 const restoredDraftId = new URLSearchParams(location.search).get("draft");
 const canvas = document.querySelector("#canvas");
 const wrap = document.querySelector("#canvas-wrap");
+const workspace = document.querySelector("#workspace");
+const editorZoom = document.querySelector("#editor-zoom");
 const overlay = document.querySelector("#overlay");
 const selection = document.querySelector("#selection");
 const ellipsePreview = document.querySelector("#ellipse-preview");
@@ -271,11 +273,27 @@ function updateButtons() {
   resetButton.disabled = history.length < 2 || submitted || JSON.stringify(currentState()) === JSON.stringify(history[0]);
 }
 
+function updateCanvasDisplaySize(crop) {
+  const style = getComputedStyle(workspace);
+  const available = Math.max(1, workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
+  const scale = Number(editorZoom.value) / 100;
+  wrap.style.width = `${Math.min(crop.width, 1100, available) * scale}px`;
+}
+
+function refreshCanvasDisplaySize() {
+  if (!sourceImage || !history.length) return;
+  updateCanvasDisplaySize(currentState().crop);
+  positionInlineText();
+  renderObjectSelection(currentState());
+}
+editorZoom.addEventListener("change", refreshCanvasDisplaySize);
+window.addEventListener("resize", refreshCanvasDisplaySize);
+
 function render(state = currentState(), excludedIndex = null) {
   const crop = state.crop;
   if (canvas.width !== crop.width) canvas.width = crop.width;
   if (canvas.height !== crop.height) canvas.height = crop.height;
-  wrap.style.width = `${Math.min(crop.width, 1100)}px`;
+  updateCanvasDisplaySize(crop);
   overlay.setAttribute("viewBox", `0 0 ${crop.width} ${crop.height}`);
   context.drawImage(sourceImage, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
 

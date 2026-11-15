@@ -1093,5 +1093,8 @@
   },
   "destination_folder_change": {
     "message": "変更"
+  },
+  "editor_image_workspace": {
+    "message": "画像編集エリア"
   }
 }
