@@ -13,7 +13,7 @@ export function historyForDraft(history, inlineEdit, text) {
   const saved = structuredClone(history);
   if (!inlineEdit) return saved;
   const value = text.trim().slice(0, 200);
-  const operations = saved[saved.length - 1].operations;
+  const operations = saved.at(-1).operations;
   if (inlineEdit.index === null && value) operations.push({ ...inlineEdit.item, text: value });
   else if (inlineEdit.index !== null && operations[inlineEdit.index]) {
     if (value) operations[inlineEdit.index].text = value;

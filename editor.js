@@ -226,7 +226,7 @@ const labels = {
   marker: kiriT("強調したい範囲をドラッグしてください。半透明の色で塗ります。")
 };
 
-function currentState() { return history[history.length - 1]; }
+function currentState() { return history.at(-1); }
 function cloneState() { return structuredClone(currentState()); }
 
 function selectTool(next) {
