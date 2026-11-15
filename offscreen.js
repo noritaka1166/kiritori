@@ -95,21 +95,28 @@ function handleTrimToCaptured(_message, sendResponse) {
 async function createPreviewResult() {
   if (captureState === paginationBundle && paginationBundle?.pages.length) {
     const pages = [];
-    return paginationBundle.pages.reduce((sequence, page) => sequence.then(() =>
-      canvasBlob(page, "image/png").then((blob) => {
-        const url = makeObjectUrl(blob);
-        pages.push({ url, width: page.width, height: page.height });
-      })
-    ), Promise.resolve()).then(() => ({ url: pages[0].url, pages })).catch((error) => {
+    try {
+      await createPaginationPreviews(paginationBundle.pages, pages);
+      return { url: pages[0].url, pages };
+    } catch (error) {
       for (const page of pages) {
         if (liveObjectUrls.delete(page.url)) URL.revokeObjectURL(page.url);
       }
       throw error;
-    });
+    }
   }
   if (!captureState?.canvas) throw new Error("プレビューする画像がありません。");
   const { canvas, pageHeightPixels } = captureState;
   return { url: makeObjectUrl(await canvasBlob(canvas, "image/png")), width: canvas.width, height: canvas.height, pageHeight: pageHeightPixels || 0 };
+}
+
+async function createPaginationPreviews(sourcePages, previews, index = 0) {
+  if (index >= sourcePages.length) return;
+  const page = sourcePages[index];
+  const blob = await canvasBlob(page, "image/png");
+  const url = makeObjectUrl(blob);
+  previews.push({ url, width: page.width, height: page.height });
+  return createPaginationPreviews(sourcePages, previews, index + 1);
 }
 
 function handlePreview(_message, sendResponse) {
