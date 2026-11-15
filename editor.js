@@ -1,3 +1,4 @@
+import { appendHistory, navigateHistoryStacks, historyForDraft } from "./editor-history.js";
 import { closeCaptureView } from "./capture-view.js";
 import { createAnnotationTools } from "./editor-annotations.js";
 
@@ -58,13 +59,7 @@ let draftClosed = false;
 let draftRevision = 0;
 function saveDraft() {
   if (!draftDb || !draftData || draftClosed || !history.length) return;
-  const savedHistory = structuredClone(history);
-  if (inlineEdit) {
-    const value = inlineText.value.trim().slice(0, 200);
-    const operations = savedHistory[savedHistory.length - 1].operations;
-    if (inlineEdit.index === null && value) operations.push({ ...inlineEdit.item, text: value });
-    else if (inlineEdit.index !== null && operations[inlineEdit.index]) { if (value) operations[inlineEdit.index].text = value; else operations.splice(inlineEdit.index, 1); }
-  }
+  const savedHistory = historyForDraft(history, inlineEdit, inlineText.value);
   const revision = ++draftRevision;
   draftStatus.textContent = kiriT("下書きを保存中…");
   const update = chrome.runtime.sendMessage({ type: "draft:update", id: draftData.id, history: savedHistory, redoStack: structuredClone(redoStack), retentionDays: draftData.retentionDays }).then((response) => { if (!response?.ok) throw new Error("Draft update failed"); });
@@ -518,8 +513,7 @@ function coveringRectangle(a, b) {
 function size() { return Math.max(12, Math.min(160, Number(sizeInput.value) || 36)); }
 
 function addState(next) {
-  redoStack = [];
-  history.push(next);
+  redoStack = appendHistory(history, next);
   render();
   saveDraft();
 }
@@ -758,8 +752,7 @@ function navigateHistory(direction) {
   cancelDragPreview();
   clearOverlay();
   selectedIndex = null;
-  if (direction === "undo" && history.length > 1) redoStack.push(history.pop());
-  else if (direction === "redo" && redoStack.length) history.push(redoStack.pop());
+  navigateHistoryStacks(history, redoStack, direction);
   render();
   saveDraft();
 }

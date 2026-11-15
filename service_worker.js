@@ -1,3 +1,4 @@
+import { validateScrollableAreaBounds, validatePaginatedScrollPosition } from "./capture-validation.js";
 import "./i18n.js";
 import { draftStore } from "./draft-store.js";
 import {
@@ -838,14 +839,6 @@ async function selectCaptureScrollableArea(tab, job, state) {
   reportCapture(job, { phase: "preparing", selectionKind: null, cancellable: true });
 }
 
-function validateScrollableAreaBounds(area, page, missingMessage = "スクロール領域がページ内から見つかりません。もう一度選択してください。") {
-  if (!area) throw new Error(missingMessage);
-  const outsideViewport = area.rect.x < 0 || area.rect.y < 0 ||
-    area.rect.x + area.rect.width > page.viewportWidth + 1 ||
-    area.rect.y + area.rect.height > page.viewportHeight + 1;
-  if (outsideViewport) throw new Error("スクロール領域全体が画面に表示されるようにしてから撮影してください。");
-}
-
 async function captureScrollableAreaFrames(tab, job, state, page) {
   let targetY = 0;
   let completed = false;
@@ -1200,11 +1193,6 @@ async function capturePaginatedScrollFrame(tab, job, scope, page, scrollWaitMs, 
   if (scope === "scroll-area" && index === 0) await executeInTab(tab.id, hideScrollableAreaSticky, [job.id]);
   throwIfCancelled(job);
   return updatePaginatedScrollTarget(tab, job, scope, actualY, metrics);
-}
-
-function validatePaginatedScrollPosition(actualY, previousY, index) {
-  if (Number.isFinite(actualY) && (index === 0 || actualY > previousY + 1)) return;
-  throw new Error("ページを縦にスクロールできませんでした。表示範囲か選択範囲で撮影してください。");
 }
 
 async function waitForCaptureInterval(scrollWaitMs, timing) {
