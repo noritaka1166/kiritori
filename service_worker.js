@@ -1186,8 +1186,8 @@ function selectPaginationButton(jobId, instruction, cancelText) {
       const parts = [];
       for (let node = element; node?.nodeType === 1; node = node.parentElement) {
         if (node.id && document.querySelectorAll(`#${CSS.escape(node.id)}`).length === 1) { parts.unshift(`#${CSS.escape(node.id)}`); break; }
-        let position = 1;
-        for (let sibling = node.previousElementSibling; sibling; sibling = sibling.previousElementSibling) if (sibling.tagName === node.tagName) position++;
+        const siblings = [...(node.parentElement?.children || [node])].filter(sibling => sibling.tagName === node.tagName);
+        const position = siblings.indexOf(node) + 1;
         parts.unshift(`${node.localName}:nth-of-type(${position})`);
       }
       let fallback = null;
