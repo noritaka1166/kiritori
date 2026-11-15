@@ -1,6 +1,6 @@
 export function shouldShowCaptureProgress(captureStatus) {
   const progressModes = ["full", "scroll-area", "pagination"];
-  const progressPhases = ["editing", "selecting", "countdown"];
+  const progressPhases = ["editing", "selecting", "countdown", "saving"];
   return Boolean(captureStatus?.active) && (progressModes.includes(captureStatus.mode) || progressPhases.includes(captureStatus.phase));
 }
 
@@ -10,6 +10,7 @@ export function getProgressMessage(captureStatus, kiriT) {
   if (captureStatus.phase === "selecting") return getSelectionMessage(captureStatus.selectionKind, kiriT);
   if (captureStatus.phase === "editing") return kiriT("プレビュー画面で画像を確認・編集してください。");
   if (captureStatus.phase === "processing") return kiriT("$1画面を撮影し、画像をまとめています…", captureStatus.currentFrame);
+  if (captureStatus.phase === "saving" && captureStatus.totalFiles > 1) return kiriT("$1件中$2件の保存が完了しました。", captureStatus.totalFiles, captureStatus.savedFiles || 0);
   if (captureStatus.phase === "saving") return kiriT("撮影した画像を出力しています…");
   if (captureStatus.currentFrame > 0) return getFrameProgressMessage(captureStatus, kiriT);
   return kiriT("撮影を準備しています…");

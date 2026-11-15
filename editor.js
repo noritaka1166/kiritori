@@ -943,7 +943,14 @@ cancelButton.addEventListener("click", async () => {
 
 chrome.runtime.onMessage.addListener((message) => {
   const state = message?.status;
-  if (message?.type !== "capture:progress" || state?.jobId !== jobId || state.active) return;
+  if (message?.type !== "capture:progress") return;
+  const progressJobId = restoredDraftId ? `draft-${restoredDraftId}` : jobId;
+  if (state?.jobId !== progressJobId) return;
+  if (state.active) {
+    if (submitted && state.phase === "saving" && state.totalFiles > 1) hint.textContent = kiriT("$1件中$2件の保存が完了しました。", state.totalFiles, state.savedFiles || 0);
+    return;
+  }
+  if (restoredDraftId) return;
   if (inlineEdit) finishInlineText();
   terminal = true;
   if (state.phase === "completed") draftClosed = true;

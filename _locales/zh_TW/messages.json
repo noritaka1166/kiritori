@@ -1081,5 +1081,8 @@
   },
   "pagination_zoom_fit": {
     "message": "符合寬度（100%）"
+  },
+  "capture_saving_progress": {
+    "message": "已儲存 $2 / $1 個檔案。"
   }
 }

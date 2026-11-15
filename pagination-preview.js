@@ -84,7 +84,11 @@ async function cancelCapture() {
 
 chrome.runtime.onMessage.addListener(message => {
   const state = message?.type === "capture:progress" && message.status;
-  if (state?.jobId !== jobId || state?.active) return;
+  if (state?.jobId !== jobId) return;
+  if (state.active) {
+    if (state.phase === "saving" && state.totalFiles > 1) statusOutput.textContent = kiriT("$1件中$2件の保存が完了しました。", state.totalFiles, state.savedFiles || 0);
+    return;
+  }
   terminal = true; clearInterval(heartbeat); save.disabled = true; cancel.disabled = false;
   cancel.textContent = kiriT("閉じる");
   statusOutput.textContent = state.message || (state.phase === "completed" ? kiriT("出力しました。") : kiriT("撮影を終了しました。"));

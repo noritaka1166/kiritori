@@ -1081,5 +1081,8 @@
   },
   "pagination_zoom_fit": {
     "message": "Fit to width (100%)"
+  },
+  "capture_saving_progress": {
+    "message": "Saved $2 of $1 files."
   }
 }

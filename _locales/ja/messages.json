@@ -1081,5 +1081,8 @@
   },
   "pagination_zoom_fit": {
     "message": "画面に合わせる（100%）"
+  },
+  "capture_saving_progress": {
+    "message": "$1件中$2件の保存が完了しました。"
   }
 }

@@ -72,3 +72,10 @@ test("capture geometry validation preserves boundary and scroll checks", () => {
   assert.throws(() => validatePaginatedScrollPosition(1, 0, 1));
   assert.doesNotThrow(() => validatePaginatedScrollPosition(2, 0, 1));
 });
+
+test("saving progress reports completed files and keeps single-file output concise", () => {
+  const translate = (text, ...values) => text.replace(/\$([1-9])/g, (_, index) => values[Number(index) - 1]);
+  assert.equal(shouldShowCaptureProgress({ active: true, mode: "viewport", phase: "saving" }), true);
+  assert.equal(getProgressMessage({ phase: "saving", totalFiles: 5, savedFiles: 2 }, translate), "5件中2件の保存が完了しました。");
+  assert.equal(getProgressMessage({ phase: "saving", totalFiles: 1, savedFiles: 0 }, translate), "撮影した画像を出力しています…");
+});

@@ -344,6 +344,8 @@ function captureStatus(job) {
     mode: job.mode,
     phase: job.phase,
     currentFrame: job.currentFrame,
+    savedFiles: job.savedFiles || 0,
+    totalFiles: job.totalFiles || 0,
     selectionKind: job.selectionKind || null,
     countdownRemaining: job.countdownRemaining || 0,
     cancellable: job.cancellable,
@@ -928,7 +930,7 @@ async function finalizeCapture(options, job, state) {
   }
   reportCapture(job, { phase: "saving", cancellable: false });
   const copied = await copyCaptureArtifact(options, artifact);
-  const saved = await saveCaptureFiles(options, artifact.files);
+  const saved = await saveCaptureFiles(options, artifact.files, job);
   return {
     message: successMessage(options, saved, copied) +
       (state.paginationWarning ? " · " + state.paginationWarning : "") +
@@ -961,16 +963,20 @@ async function copyCaptureArtifact(options, artifact) {
   return true;
 }
 
-async function saveCaptureFiles(options, files) {
+async function saveCaptureFiles(options, files, job) {
   if (options.destination !== "save" && options.destination !== "both") {
     await offscreenMessage({ type: "release", urls: files.map((file) => file.url) });
     return 0;
   }
   const folder = normalizeFolder(options.folder);
+  let savedFiles = 0;
+  reportCapture(job, { phase: "saving", savedFiles, totalFiles: files.length });
   try {
     const results = await Promise.allSettled(files.map((file) => {
       const filename = [folder, `${options.fileStem}${file.suffix}`].filter(Boolean).join("/");
-      return downloadFile(chrome.downloads, { url: file.url, filename, conflictAction: "uniquify", saveAs: false });
+      return downloadFile(chrome.downloads, { url: file.url, filename, conflictAction: "uniquify", saveAs: false }).then(() => {
+        reportCapture(job, { savedFiles: ++savedFiles });
+      });
     }));
     const failure = results.find((result) => result.status === "rejected");
     if (failure) throw failure.reason;
@@ -1021,7 +1027,7 @@ async function exportRecoveredDraft(id, url) {
     await offscreenMessage({ type: "replace-image", url });
     const artifact = await offscreenMessage({ type: "finish" });
     const copied = await copyCaptureArtifact(options, artifact);
-    const saved = await saveCaptureFiles(options, artifact.files);
+    const saved = await saveCaptureFiles(options, artifact.files, job);
     return successMessage(options, saved, copied);
   } catch (error) {
     await offscreenMessage({ type: "discard" }).catch(() => undefined);
