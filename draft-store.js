@@ -28,65 +28,63 @@ async function draftTransaction(mode, operation) {
   const database = await openDraftDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(draftStoreName, mode);
-    const request = operation(transaction.objectStore(draftStoreName));
     let result;
-    request.onsuccess = () => { result = request.result; };
+    const setResult = (value) => { result = value; };
+    const request = operation(transaction.objectStore(draftStoreName), setResult);
     transaction.oncomplete = () => resolve(result);
-    transaction.onabort = transaction.onerror = () => reject(transaction.error || request.error);
+    transaction.onabort = transaction.onerror = () => reject(transaction.error || request?.error);
+  });
+}
+
+function runRequest(mode, operation) {
+  return draftTransaction(mode, (store, setResult) => {
+    const request = operation(store);
+    request.onsuccess = () => setResult(request.result);
+    return request;
+  });
+}
+
+function visitDrafts(mode, visit, initialResult) {
+  return draftTransaction(mode, (store, setResult) => {
+    setResult(initialResult);
+    const request = store.openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      visit(cursor);
+      cursor.continue();
+    };
+    return request;
   });
 }
 
 export const draftStore = {
-  get(id) { return draftTransaction("readonly", (store) => store.get(id)); },
-  async list() {
-    const database = await openDraftDatabase();
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction(draftStoreName, "readonly");
-      const request = transaction.objectStore(draftStoreName).openCursor();
-      const entries = [];
-      request.onsuccess = () => {
-        const cursor = request.result;
-        if (!cursor) return;
-        const { id, meta, updatedAt, expiresAt } = cursor.value;
-        entries.push({ id, meta, updatedAt, expiresAt });
-        cursor.continue();
-      };
-      transaction.oncomplete = () => resolve(entries);
-      transaction.onabort = transaction.onerror = () => reject(transaction.error || request.error);
-    });
+  get(id) { return runRequest("readonly", (store) => store.get(id)); },
+  list() {
+    const entries = [];
+    return visitDrafts("readonly", (cursor) => {
+      const { id, meta, updatedAt, expiresAt } = cursor.value;
+      entries.push({ id, meta, updatedAt, expiresAt });
+    }, entries);
   },
-  put(draft) { return draftTransaction("readwrite", (store) => store.put(draft)); },
-  async update(id, changes) {
-    const database = await openDraftDatabase();
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction(draftStoreName, "readwrite");
-      const store = transaction.objectStore(draftStoreName);
+  put(draft) { return runRequest("readwrite", (store) => store.put(draft)); },
+  update(id, changes) {
+    return draftTransaction("readwrite", (store, setResult) => {
+      setResult(false);
       const request = store.get(id);
-      let found = false;
       request.onsuccess = () => {
         if (!request.result) return;
-        found = true;
         store.put({ ...request.result, ...changes, id });
+        setResult(true);
       };
-      transaction.oncomplete = () => resolve(found);
-      transaction.onabort = transaction.onerror = () => reject(transaction.error || request.error);
+      return request;
     });
   },
-  delete(id) { return draftTransaction("readwrite", (store) => store.delete(id)); },
-  clear() { return draftTransaction("readwrite", (store) => store.clear()); },
-  async deleteExpired(now = Date.now()) {
-    const database = await openDraftDatabase();
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction(draftStoreName, "readwrite");
-      const request = transaction.objectStore(draftStoreName).openCursor();
-      request.onsuccess = () => {
-        const cursor = request.result;
-        if (!cursor) return;
-        if (Number.isFinite(cursor.value.expiresAt) && cursor.value.expiresAt <= now) cursor.delete();
-        cursor.continue();
-      };
-      transaction.oncomplete = () => resolve();
-      transaction.onabort = transaction.onerror = () => reject(transaction.error || request.error);
+  delete(id) { return runRequest("readwrite", (store) => store.delete(id)); },
+  clear() { return runRequest("readwrite", (store) => store.clear()); },
+  deleteExpired(now = Date.now()) {
+    return visitDrafts("readwrite", (cursor) => {
+      if (Number.isFinite(cursor.value.expiresAt) && cursor.value.expiresAt <= now) cursor.delete();
     });
   }
 };
