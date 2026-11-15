@@ -780,7 +780,7 @@ async function captureFullPageFrame(tab, job, state, index, targetY) {
 
 async function captureScrollableArea(tab, options, job, state) {
   const page = await executeInTab(tab.id, readPageInfo);
-  const area = await selectCaptureScrollableArea(tab, job, state);
+  await selectCaptureScrollableArea(tab, job, state);
   const metrics = await executeInTab(tab.id, readScrollableAreaMetrics, [job.id]);
   validateScrollableAreaBounds(metrics, page);
   await executeInTab(tab.id, suppressScrollableAreaHover, [job.id]);
