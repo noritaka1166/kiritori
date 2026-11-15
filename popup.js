@@ -91,6 +91,7 @@ const frameLimitSetting = document.querySelector("#frame-limit-setting");
 const splitOutput = document.querySelector("#split-output");
 const splitSetting = document.querySelector("#split-setting");
 const scrollAreaNote = document.querySelector("#scroll-area-note");
+const captureModeDescription = document.querySelector("#capture-mode-description");
 const folder = document.querySelector("#folder");
 const removeAds = document.querySelector("#remove-ads");
 const manualHide = document.querySelector("#manual-hide");
@@ -351,6 +352,14 @@ function updateControls() {
   document.querySelector("#preview-note").hidden = isPagination;
   removeAds.disabled = isPagination;
   manualHide.disabled = isPagination;
+  const modeDescriptions = {
+    viewport: "今画面に表示されている部分を撮影します。",
+    region: "画面上で選んだ範囲を撮影します。",
+    full: "ページ全体を縦にスクロールして撮影します。",
+    "scroll-area": "表など、ページ内で個別にスクロールする領域を撮影します。",
+    pagination: "次のページに進みながら複数ページを撮影します。"
+  };
+  captureModeDescription.textContent = kiriT(modeDescriptions[mode.value] || "");
   scrollAreaNote.hidden = mode.value !== "scroll-area";
   const scrolling = ["full", "scroll-area"].includes(mode.value) || (isPagination && ["full", "scroll-area"].includes(paginationScope.value));
   frameLimitSetting.hidden = !scrolling;

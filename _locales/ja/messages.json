@@ -1015,5 +1015,20 @@
   },
   "capture_delay_custom_seconds": {
     "message": "待ち時間（秒、1〜999）"
+  },
+  "capture_mode_desc_viewport": {
+    "message": "今画面に表示されている部分を撮影します。"
+  },
+  "capture_mode_desc_region": {
+    "message": "画面上で選んだ範囲を撮影します。"
+  },
+  "capture_mode_desc_full": {
+    "message": "ページ全体を縦にスクロールして撮影します。"
+  },
+  "capture_mode_desc_area": {
+    "message": "表など、ページ内で個別にスクロールする領域を撮影します。"
+  },
+  "capture_mode_desc_pagination": {
+    "message": "次のページに進みながら複数ページを撮影します。"
   }
 }

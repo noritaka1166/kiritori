@@ -1015,5 +1015,20 @@
   },
   "capture_delay_custom_seconds": {
     "message": "等待时间（秒，1～999）"
+  },
+  "capture_mode_desc_viewport": {
+    "message": "截取当前屏幕上显示的部分。"
+  },
+  "capture_mode_desc_region": {
+    "message": "截取在屏幕上选择的区域。"
+  },
+  "capture_mode_desc_full": {
+    "message": "垂直滚动并截取整个页面。"
+  },
+  "capture_mode_desc_area": {
+    "message": "截取表格等页面内可单独滚动的区域。"
+  },
+  "capture_mode_desc_pagination": {
+    "message": "逐页前进并截取多个页面。"
   }
 }

@@ -1015,5 +1015,20 @@
   },
   "capture_delay_custom_seconds": {
     "message": "Delay (seconds, 1–999)"
+  },
+  "capture_mode_desc_viewport": {
+    "message": "Capture the part currently visible on screen."
+  },
+  "capture_mode_desc_region": {
+    "message": "Capture an area you select on screen."
+  },
+  "capture_mode_desc_full": {
+    "message": "Scroll vertically to capture the entire page."
+  },
+  "capture_mode_desc_area": {
+    "message": "Capture a separately scrolling area, such as a table."
+  },
+  "capture_mode_desc_pagination": {
+    "message": "Capture multiple pages while moving to the next page."
   }
 }

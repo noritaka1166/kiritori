@@ -1015,5 +1015,20 @@
   },
   "capture_delay_custom_seconds": {
     "message": "等待時間（秒，1～999）"
+  },
+  "capture_mode_desc_viewport": {
+    "message": "擷取目前畫面上顯示的部分。"
+  },
+  "capture_mode_desc_region": {
+    "message": "擷取在畫面上選取的範圍。"
+  },
+  "capture_mode_desc_full": {
+    "message": "垂直捲動並擷取整個頁面。"
+  },
+  "capture_mode_desc_area": {
+    "message": "擷取表格等頁面內可個別捲動的區域。"
+  },
+  "capture_mode_desc_pagination": {
+    "message": "逐頁前進並擷取多個頁面。"
   }
 }
