@@ -423,16 +423,17 @@ function getOutputPartHeight(meta, split, viewportHeight, scale, canvas) {
 
 async function createRasterFiles(canvas, settings, files) {
   const { partCount, partHeight, split, pngBlob, format, type, extension } = settings;
-  for (let index = 0; index < partCount; index += 1) {
+  const encodedParts = await Promise.all(Array.from({ length: partCount }, async (_, index) => {
     const part = split ? sliceCanvas(canvas, index * partHeight, partHeight) : canvas;
     try {
       const blob = !split && pngBlob && format === "png" ? pngBlob : await canvasBlob(part, type, 0.92);
       const number = split ? `_${String(index + 1).padStart(3, "0")}` : "";
-      files.push({ suffix: `${number}${extension}`, url: makeObjectUrl(blob) });
+      return { blob, suffix: `${number}${extension}` };
     } finally {
       if (part !== canvas) { part.width = 0; part.height = 0; }
     }
-  }
+  }));
+  for (const { blob, suffix } of encodedParts) files.push({ suffix, url: makeObjectUrl(blob) });
 }
 
 function revokeFiles(files) {
