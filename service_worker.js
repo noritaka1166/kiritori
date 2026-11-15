@@ -1479,14 +1479,14 @@ function cancelManualSelection(jobId) {
 }
 
 async function restoreStaleScrollAreaState() {
+  const markerOwner = "kiritori";
+  const markerVersion = 1;
+  const emptyMarker = "null";
+  const importantPriority = "important";
   if (window.__kiritoriScrollSelector?.cancel) {
     window.__kiritoriScrollSelector.cancel();
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }
-  restoreAreaMarkers();
-  restoreStickyMarkers();
-  restoreInteractionStyles();
-  restoreStaleCapture();
 
   function restoreAreaMarkers() {
     document.querySelectorAll("[data-kiritori-scroll-state]").forEach(restoreAreaMarker);
@@ -1494,11 +1494,12 @@ async function restoreStaleScrollAreaState() {
 
   function restoreAreaMarker(element) {
     const saved = parseSavedMarker(element.dataset.kiritoriScrollState);
-    if (!isKiritoriMarker(saved)) return;
+    if (!saved) return;
     element.scrollTop = saved.originalTop;
     element.scrollLeft = saved.originalLeft;
     restoreInlineStyle(element, "scroll-behavior", "auto", saved.scrollBehavior, saved.scrollPriority, saved.hadStyle);
-    restoreSavedMarker(element, "kiritoriScrollState", saved.previousMarker);
+    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
+    else element.dataset.kiritoriScrollState = saved.previousMarker;
   }
 
   function restoreStickyMarkers() {
@@ -1507,15 +1508,16 @@ async function restoreStaleScrollAreaState() {
 
   function restoreStickyMarker(element) {
     const saved = parseSavedMarker(element.dataset.kiritoriScrollSticky);
-    if (!isKiritoriMarker(saved)) return;
+    if (!saved) return;
     restoreInlineStyle(element, "visibility", "hidden", saved.visibility, saved.visibilityPriority, saved.hadStyle);
-    restoreSavedMarker(element, "kiritoriScrollSticky", saved.previousMarker);
+    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollSticky;
+    else element.dataset.kiritoriScrollSticky = saved.previousMarker;
   }
 
   function restoreInteractionStyles() {
     document.querySelectorAll("style[data-kiritori-scroll-interaction]").forEach((style) => {
       const saved = parseSavedMarker(style.dataset.kiritoriScrollInteraction);
-      if (isKiritoriMarker(saved)) style.remove();
+      if (saved) style.remove();
     });
   }
 
@@ -1531,30 +1533,28 @@ async function restoreStaleScrollAreaState() {
     delete window.__kiritoriScrollCapture;
   }
 
-  function parseSavedMarker(value) {
+  const parseSavedMarker = (value) => {
     try {
-      return JSON.parse(value || "null");
-    } catch (_) {
+      const saved = JSON.parse(value || emptyMarker);
+      return saved?.owner === markerOwner && saved.version === markerVersion ? saved : null;
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
       // Ignore malformed marker data left by a page or an interrupted capture.
       return null;
     }
-  }
+  };
 
-  function isKiritoriMarker(saved) {
-    return saved?.owner === "kiritori" && saved.version === 1;
-  }
-
-  function restoreInlineStyle(element, property, currentValue, savedValue, savedPriority, hadStyle) {
-    if (element.style.getPropertyValue(property) !== currentValue || element.style.getPropertyPriority(property) !== "important") return;
+  const restoreInlineStyle = (element, property, currentValue, savedValue, savedPriority, hadStyle) => {
+    if (element.style.getPropertyValue(property) !== currentValue || element.style.getPropertyPriority(property) !== importantPriority) return;
     if (savedValue) element.style.setProperty(property, savedValue, savedPriority);
     else element.style.removeProperty(property);
     if (!hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
-  }
+  };
 
-  function restoreSavedMarker(element, key, previousMarker) {
-    if (previousMarker === null) delete element.dataset[key];
-    else element.dataset[key] = previousMarker;
-  }
+  restoreAreaMarkers();
+  restoreStickyMarkers();
+  restoreInteractionStyles();
+  restoreStaleCapture();
 }
 function selectScrollableArea(jobId, labels) {
   if (window.__kiritoriScrollSelector?.cancel) void window.__kiritoriScrollSelector.cancel();
