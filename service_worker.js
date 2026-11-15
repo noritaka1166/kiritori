@@ -1786,9 +1786,10 @@ function selectScrollableArea(jobId, labels) {
         state.port.onDisconnect.addListener(() => { if (!state.settled) state.cancel(); });
         state.port.postMessage({ type: "hello", jobId });
         state.timer = setInterval(() => { try { state.port.postMessage({ type: "heartbeat" }); } catch (_) { state.cancel(); } }, 20_000);
-      } catch (_) {
-        // A missing extension connection means the picker can no longer be controlled.
+      } catch (error) {
+        // A connection setup failure leaves the picker uncontrollable, so cancel it and log the cause.
         state.cancel();
+        console.warn("Could not initialize the scroll area picker connection; cancelling the picker.", error);
       }
     });
   }
