@@ -44,7 +44,10 @@ function renderDrafts() {
     const query = draftSearch.value.trim().toLocaleLowerCase();
     const drafts = savedDrafts.filter(draft => String(draft.meta?.title || "KiriTori").toLocaleLowerCase().includes(query));
     draftList.replaceChildren(); draftClear.hidden = savedDrafts.length === 0;
-    draftListStatus.textContent = !savedDrafts.length ? kiriT("保存された下書きはありません。") : !drafts.length ? kiriT("一致する下書きはありません。") : query ? kiriT("$1件の下書きが見つかりました。", drafts.length) : kiriT("保存された下書き");
+    if (!savedDrafts.length) draftListStatus.textContent = kiriT("保存された下書きはありません。");
+    else if (!drafts.length) draftListStatus.textContent = kiriT("一致する下書きはありません。");
+    else if (query) draftListStatus.textContent = kiriT("$1件の下書きが見つかりました。", drafts.length);
+    else draftListStatus.textContent = kiriT("保存された下書き");
     for (const draft of drafts) {
       const row = document.createElement("div"); row.className = "draft-row";
       const title = document.createElement("div"); title.className = "draft-title"; title.textContent = draft.meta?.title || "KiriTori";
