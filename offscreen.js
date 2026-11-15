@@ -361,7 +361,7 @@ function finishPaginationBundle() {
 async function finishRegularCapture() {
   if (!captureState?.canvas) throw new Error("撮影画像がありません。");
   const { canvas, meta, options, scale } = captureState;
-  const split = meta.mode === "pagination" || (options.splitOutput === true && ["full", "scroll-area"].includes(meta.mode) && options.destination !== "copy");
+  const split = shouldSplitCaptureOutput(meta, options);
   const viewportHeight = meta.mode === "scroll-area" ? meta.scrollArea.clientHeight : meta.viewportHeight;
   const partHeight = getOutputPartHeight(meta, split, viewportHeight, scale, canvas);
   const partCount = split ? Math.ceil(canvas.height / partHeight) : 1;
@@ -387,6 +387,13 @@ async function finishRegularCapture() {
 
   captureState = null;
   return { files, clipboard };
+}
+
+function shouldSplitCaptureOutput(meta, options) {
+  if (meta.mode === "pagination") return true;
+  return options.splitOutput === true &&
+    ["full", "scroll-area"].includes(meta.mode) &&
+    options.destination !== "copy";
 }
 
 function getOutputPartHeight(meta, split, viewportHeight, scale, canvas) {
