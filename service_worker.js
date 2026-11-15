@@ -2322,7 +2322,7 @@ async function prepareFullPage() {
   const hideFixedElements = () => {
     for (const element of document.querySelectorAll("body *")) {
       const position = getComputedStyle(element).position;
-      if ((position === "fixed" || position === "sticky") && !element.dataset.localcaptureHidden !== undefined) {
+      if ((position === "fixed" || position === "sticky") && element.dataset.localcaptureHidden === undefined) {
         element.dataset.localcaptureHidden = "1";
         state.hidden.push(element);
       }
@@ -2357,7 +2357,7 @@ async function scrollFullPage(y) {
   const captureState = window.__localCaptureState;
   for (const element of document.querySelectorAll("body *")) {
     const position = getComputedStyle(element).position;
-    if ((position === "fixed" || position === "sticky") && !element.dataset.localcaptureHidden !== undefined) {
+    if ((position === "fixed" || position === "sticky") && element.dataset.localcaptureHidden === undefined) {
       element.dataset.localcaptureHidden = "1";
       captureState?.hidden.push(element);
     }
