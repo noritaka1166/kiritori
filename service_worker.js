@@ -1724,7 +1724,8 @@ function selectScrollableArea(jobId, labels) {
         try { state.port?.disconnect(); } catch (_) {}
         host.remove();
         if (window.__kiritoriScrollSelector === state) delete window.__kiritoriScrollSelector;
-        await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+        await new Promise((done) => requestAnimationFrame(done));
+        await new Promise((done) => requestAnimationFrame(done));
         resolveSelection(value);
       }
 
