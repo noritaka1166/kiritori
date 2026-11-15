@@ -1039,5 +1039,8 @@
   },
   "editor_group_effects": {
     "message": "ぼかし・強調"
+  },
+  "failure_history_count": {
+    "message": "$1件"
   }
 }

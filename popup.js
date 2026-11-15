@@ -104,6 +104,7 @@ const progressText = document.querySelector("#progress-text");
 const cancelCapture = document.querySelector("#cancel-capture");
 const openEditor = document.querySelector("#open-editor");
 const failureHistory = document.querySelector("#failure-history");
+const failureCount = document.querySelector("#failure-count");
 const failureList = document.querySelector("#failure-list");
 const failureStatus = document.querySelector("#failure-status");
 const clearFailures = document.querySelector("#clear-failures");
@@ -125,6 +126,7 @@ async function refreshFailures() {
     failureList.replaceChildren();
     const failures = Array.isArray(response.failures) ? response.failures.slice(0, 10) : [];
     failureHistory.hidden = failures.length === 0;
+    failureCount.textContent = kiriT("$1件", failures.length);
     failureStatus.textContent = "";
     const modes = { viewport: kiriT("表示中の範囲"), region: kiriT("選択範囲"), full: kiriT("ページ全体"), "scroll-area": kiriT("スクロール領域"), pagination: kiriT("ページ送りをしながら撮影") };
     const phases = { preparing: kiriT("準備中"), countdown: kiriT("撮影待機中"), selecting: kiriT("要素選択中"), capturing: kiriT("撮影中"), processing: kiriT("画像処理中"), editing: kiriT("編集中"), saving: kiriT("出力中") };
@@ -146,6 +148,8 @@ async function refreshFailures() {
     if (request !== failureRequest) return;
     console.error("失敗履歴を読み込めませんでした。", error);
     failureHistory.hidden = false;
+    failureHistory.open = true;
+    failureCount.textContent = "";
     failureStatus.textContent = kiriT("失敗履歴を読み込めませんでした。拡張機能を再読み込みしてください。");
   }
 }

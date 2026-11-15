@@ -1039,5 +1039,8 @@
   },
   "editor_group_effects": {
     "message": "Blur & highlight"
+  },
+  "failure_history_count": {
+    "message": "$1 items"
   }
 }

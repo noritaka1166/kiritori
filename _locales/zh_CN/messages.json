@@ -1039,5 +1039,8 @@
   },
   "editor_group_effects": {
     "message": "模糊与突出"
+  },
+  "failure_history_count": {
+    "message": "$1 条"
   }
 }

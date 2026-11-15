@@ -12,13 +12,13 @@
         <p>ページの内容は外部へ送信しません。</p>
       </header>
     <main id="settings-content">
-      <section id="failure-history" class="failure-history" hidden aria-labelledby="failure-heading">
-        <h2 id="failure-heading">撮影の失敗履歴</h2>
+      <details id="failure-history" class="failure-history" hidden>
+        <summary><span>撮影の失敗履歴</span><span id="failure-count"></span></summary>
         <p class="failure-note">最近の失敗を最大10件、この端末に保存します。</p>
         <ol id="failure-list"></ol>
         <button id="clear-failures" type="button">履歴を削除</button>
         <output id="failure-status" aria-live="polite"></output>
-      </section>
+      </details>
       <div class="section-heading">撮影設定</div>
       <div class="primary-settings">
       <label for="capture-mode">撮影範囲</label>
