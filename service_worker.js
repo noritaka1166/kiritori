@@ -1236,7 +1236,8 @@ function clickPaginationButton(button) {
       const candidates = document.querySelectorAll(target.fallback);
       const fallback = candidates.length === 1 ? candidates[0] : null;
       return matchesTarget(fallback, target) ? fallback : null;
-    } catch (_) {
+    } catch (error) {
+      if (!(error instanceof DOMException) || error.name !== "SyntaxError") throw error;
       // Page-provided selectors may become invalid after client-side navigation.
       return null;
     }
