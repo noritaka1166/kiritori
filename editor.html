@@ -17,6 +17,8 @@
       </div>
     </header>
     <main>
+      <details class="editor-panel" open>
+        <summary>編集ツール</summary>
       <section class="toolbar" aria-label="編集ツール">
         <div class="tool-groups">
         <fieldset class="tools">
@@ -46,6 +48,9 @@
         <button id="redo" type="button" disabled>やり直す</button>
         <button id="reset" type="button" disabled>最初に戻す</button>
       </section>
+      </details>
+      <details class="editor-panel" open>
+        <summary>色の設定</summary>
       <section class="palette" aria-label="色の設定">
         <div class="palette-row">
           <strong>基本色</strong>
@@ -63,6 +68,7 @@
         </div>
         <output id="palette-status" class="palette-status" aria-live="polite"></output>
       </section>
+      </details>
       <section id="object-controls" class="object-controls" aria-label="選択した要素の調整" hidden>
         <strong id="object-label">選択中</strong>
         <label>大きさ <input id="object-size" type="number" min="12" max="500" step="1"></label>

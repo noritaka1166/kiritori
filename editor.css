@@ -15,7 +15,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid #9bbfff; outline-
 .primary { background: #1a73e8; border-color: #1a73e8; color: white; font-weight: 650; }
 .primary:hover { background: #1765cc; }
 main { max-width: 1280px; margin: auto; padding: 18px 24px 32px; }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border: 1px solid #dfe4eb; border-radius: 12px; background: #fff; }
+.editor-panel { margin-bottom: 8px; border: 1px solid #dfe4eb; border-radius: 12px; background: #fff; }
+.editor-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; color: #263343; font-size: 13px; font-weight: 650; cursor: pointer; list-style: none; }
+.editor-panel summary::-webkit-details-marker { display: none; }
+.editor-panel summary::after { content: ""; width: 7px; height: 7px; margin: 0 3px 4px 0; border-right: 1.5px solid #536071; border-bottom: 1.5px solid #536071; transform: rotate(45deg); }
+.editor-panel[open] summary::after { margin-bottom: -3px; transform: rotate(225deg); }
+.editor-panel summary:focus-visible { outline: 3px solid #9bbfff; outline-offset: -3px; border-radius: 8px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 12px 12px; }
 .tools, .swatches { min-width: 0; margin: 0; padding: 0; border: 0; }
 .tool-groups { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
 .tools { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 8px 8px; border: 1px solid #e5eaf1; border-radius: 8px; }
@@ -23,7 +29,7 @@ main { max-width: 1280px; margin: auto; padding: 18px 24px 32px; }
 .tools button[aria-pressed="true"] { color: #174ea6; border-color: #1a73e8; background: #e8f0fe; font-weight: 650; }
 .toolbar label { display: inline-flex; align-items: center; gap: 5px; color: #536071; font-size: 13px; }
 .toolbar input { height: 34px; border: 1px solid #ccd3dd; border-radius: 6px; padding: 4px 6px; }
-.palette { margin-top: 8px; padding: 10px 12px; border: 1px solid #dfe4eb; border-radius: 10px; background: #fff; }
+.palette { padding: 2px 12px 12px; }
 .palette-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .palette-row + .palette-row { margin-top: 8px; }
 .palette strong, .custom-picker { color: #536071; font-size: 13px; }
