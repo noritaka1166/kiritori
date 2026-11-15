@@ -1601,14 +1601,16 @@ function selectScrollableArea(jobId, labels) {
   }
 
   const parseMarker = (value) => {
+    let saved;
     try {
-      const saved = JSON.parse(value || emptyMarker);
-      return saved?.owner === markerOwner && saved.version === markerVersion ? saved : null;
+      saved = JSON.parse(value || emptyMarker);
     } catch (error) {
       if (!(error instanceof SyntaxError)) throw error;
       // Ignore malformed marker data left by a page or an interrupted capture.
       return null;
     }
+    if (saved?.owner !== markerOwner || saved.version !== markerVersion) return null;
+    return saved;
   };
 
   const restoreInlineStyle = (element, property, currentValue, savedValue, savedPriority, hadStyle) => {
