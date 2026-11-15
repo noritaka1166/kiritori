@@ -478,9 +478,8 @@ async function prepareCaptureTab(tab, options, job) {
 async function runCaptureCountdown(tab, job, seconds, options) {
   job.hadCountdown = true;
   const deadline = Date.now() + seconds * 1000;
-  let previousRemaining = 0;
   try {
-    previousRemaining = await continueCaptureCountdown(tab, job, options, deadline, previousRemaining);
+    await continueCaptureCountdown(tab, job, options, deadline, 0);
   } finally {
     await executeInTab(tab.id, updateCountdownOverlay, [job.id, 0, ""]);
   }
@@ -493,14 +492,14 @@ async function runCaptureCountdown(tab, job, seconds, options) {
 async function continueCaptureCountdown(tab, job, options, deadline, previousRemaining) {
   throwIfCancelled(job);
   const remainingMs = deadline - Date.now();
-  if (remainingMs <= 0) return previousRemaining;
+  if (remainingMs <= 0) return;
   const remaining = Math.ceil(remainingMs / 1000);
   if (remaining !== previousRemaining) {
     reportCapture(job, { phase: "countdown", countdownRemaining: remaining, cancellable: true });
     await executeInTab(tab.id, updateCountdownOverlay, [job.id, remaining, kiriT("$1秒後に撮影を開始します…", remaining)]);
   }
   await delay(Math.min(250, Math.max(0, deadline - Date.now())));
-  return continueCaptureCountdown(tab, job, options, deadline, remaining);
+  await continueCaptureCountdown(tab, job, options, deadline, remaining);
 }
 
 function createCaptureState(options) {
