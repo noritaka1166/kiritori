@@ -357,10 +357,10 @@ async function finishPaginationBundle() {
     } else {
       const type = options.format === "png" ? "image/png" : "image/jpeg";
       const extension = options.format === "png" ? ".png" : ".jpg";
-      for (const [index, page] of pages.entries()) {
-        const blob = await canvasBlob(page, type, .92);
+      const blobs = await Promise.all(pages.map((page) => canvasBlob(page, type, .92)));
+      blobs.forEach((blob, index) => {
         files.push({ suffix: `_${String(index + 1).padStart(3, "0")}${extension}`, url: makeObjectUrl(blob) });
-      }
+      });
     }
 
     return finish();
