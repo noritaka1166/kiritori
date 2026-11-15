@@ -1042,5 +1042,14 @@
   },
   "failure_history_count": {
     "message": "$1 条"
+  },
+  "draft_clear_title": {
+    "message": "删除所有草稿？"
+  },
+  "draft_clear_description": {
+    "message": "所有已保存的草稿都将被删除，且无法恢复。"
+  },
+  "draft_clear_confirm": {
+    "message": "全部删除"
   }
 }

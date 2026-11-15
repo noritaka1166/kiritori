@@ -1042,5 +1042,14 @@
   },
   "failure_history_count": {
     "message": "$1 items"
+  },
+  "draft_clear_title": {
+    "message": "Delete all drafts?"
+  },
+  "draft_clear_description": {
+    "message": "All saved drafts will be deleted and cannot be restored."
+  },
+  "draft_clear_confirm": {
+    "message": "Delete all"
   }
 }

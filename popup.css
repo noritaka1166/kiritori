@@ -74,3 +74,15 @@ output[aria-live="polite"] { display: block; }
 .draft-row span { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 12px; }
 #draft-clear { margin-top: 8px; }
 @media (max-height: 430px) { header { padding-top: 9px; padding-bottom: 8px; } header p { display: none; } .capture-footer { padding-top: 8px; padding-bottom: 8px; } }
+
+.draft-row .draft-open { border-color: #91b5f7; color: #185abc; }
+.draft-row .draft-remove { border-color: transparent; background: transparent; color: #68788f; }
+.draft-row .draft-remove:hover { background: #fff2f0; color: #a3221a; }
+#draft-clear-dialog { width: min(310px, calc(100% - 32px)); padding: 18px; border: 1px solid #d8e0ed; border-radius: 12px; color: #1e293b; box-shadow: 0 8px 24px #233d6a33; }
+#draft-clear-dialog::backdrop { background: #10182880; }
+#draft-clear-dialog h2 { margin: 0; font-size: 15px; }
+#draft-clear-dialog p { color: #52647c; font-size: 13px; line-height: 1.5; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dialog-actions button { min-height: 34px; padding: 6px 10px; border: 1px solid #d0d9e7; background: #fff; color: #37527a; }
+.dialog-actions #draft-clear-confirm { border-color: #b3261e; background: #b3261e; color: #fff; }
+.dialog-actions button:disabled { opacity: .6; }

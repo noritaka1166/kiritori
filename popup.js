@@ -19,6 +19,9 @@ const draftRetention = document.querySelector("#draft-retention");
 const draftList = document.querySelector("#draft-list");
 const draftListStatus = document.querySelector("#draft-list-status");
 const draftClear = document.querySelector("#draft-clear");
+const draftClearDialog = document.querySelector("#draft-clear-dialog");
+const draftClearCancel = document.querySelector("#draft-clear-cancel");
+const draftClearConfirm = document.querySelector("#draft-clear-confirm");
 let draftDb;
 async function refreshDrafts() {
   if (!draftDb) return;
@@ -30,9 +33,9 @@ async function refreshDrafts() {
     for (const draft of drafts) {
       const row = document.createElement("div"); row.className = "draft-row";
       const title = document.createElement("span"); title.textContent = `${draft.meta?.title || "KiriTori"} · ${new Date(draft.updatedAt).toLocaleString(chrome.i18n.getUILanguage())}`;
-      const open = document.createElement("button"); open.type = "button"; open.textContent = kiriT("復元");
+      const open = document.createElement("button"); open.className = "draft-open"; open.type = "button"; open.textContent = kiriT("復元");
       open.addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL(`editor.html?draft=${encodeURIComponent(draft.id)}`) }));
-      const remove = document.createElement("button"); remove.type = "button"; remove.textContent = kiriT("削除");
+      const remove = document.createElement("button"); remove.className = "draft-remove"; remove.type = "button"; remove.textContent = kiriT("削除");
       remove.addEventListener("click", async () => {
         try {
           await draftDb.delete(draft.id);
@@ -56,16 +59,26 @@ draftRetention.addEventListener("change", async () => {
     draftListStatus.textContent = kiriT("設定を保存できませんでした。");
   }
 });
-draftClear.addEventListener("click", async () => {
-  if (!draftDb) {
-    return;
-  }
+draftClear.addEventListener("click", () => {
+  if (draftDb) draftClearDialog.showModal();
+});
+draftClearCancel.addEventListener("click", () => draftClearDialog.close());
+draftClearDialog.addEventListener("cancel", (event) => { if (draftClearConfirm.disabled) event.preventDefault(); });
+draftClearConfirm.addEventListener("click", async () => {
+  if (!draftDb || draftClearConfirm.disabled) return;
+  draftClearConfirm.disabled = true;
+  draftClearCancel.disabled = true;
   try {
     await draftDb.clear();
+    draftClearDialog.close();
     await refreshDrafts();
   } catch (error) {
     console.error("下書きを削除できませんでした。", error);
+    draftClearDialog.close();
     draftListStatus.textContent = kiriT("下書きを削除できませんでした。");
+  } finally {
+    draftClearConfirm.disabled = false;
+    draftClearCancel.disabled = false;
   }
 });
 const siteSettingsEnabled = document.querySelector("#site-settings-enabled");

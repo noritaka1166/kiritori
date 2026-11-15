@@ -1042,5 +1042,14 @@
   },
   "failure_history_count": {
     "message": "$1件"
+  },
+  "draft_clear_title": {
+    "message": "下書きをすべて削除しますか？"
+  },
+  "draft_clear_description": {
+    "message": "保存された下書きはすべて削除され、復元できません。"
+  },
+  "draft_clear_confirm": {
+    "message": "すべて削除"
   }
 }

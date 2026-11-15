@@ -188,6 +188,14 @@
       <output id="status" aria-live="polite">形式と撮影範囲を選んでください。</output>
 
     </footer>
+    <dialog id="draft-clear-dialog" aria-labelledby="draft-clear-title" aria-describedby="draft-clear-description">
+      <h2 id="draft-clear-title">下書きをすべて削除しますか？</h2>
+      <p id="draft-clear-description">保存された下書きはすべて削除され、復元できません。</p>
+      <div class="dialog-actions">
+        <button id="draft-clear-cancel" type="button">キャンセル</button>
+        <button id="draft-clear-confirm" type="button">すべて削除</button>
+      </div>
+    </dialog>
     <script src="i18n.js"></script>
     <script src="popup.js" type="module"></script>
   </body>
