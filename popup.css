@@ -52,7 +52,7 @@ output[aria-live="polite"] { display: block; }
 .capture-progress .note { margin-top: 5px; }
 .capture-progress button { width: auto; min-height: 30px; margin: 7px 5px 0 0; padding: 5px 9px; border: 1px solid #91b5f7; background: white; color: #185abc; }
 .capture-progress button:hover:not(:disabled) { background: #e8f0fe; }
-.capture-progress button:disabled { color: #8793a6; border-color: #d5dce7; background: #f5f7fa; }
+.capture-progress button:disabled { color: #626f82; border-color: #d5dce7; background: #f5f7fa; }
 .failure-history { padding: 10px 12px; margin-bottom: 14px; border: 1px solid #f0b8b3; border-radius: 10px; background: #fff7f6; }
 .failure-history h2 { margin: 0 0 4px; color: #a3221a; font-size: 14px; }
 .failure-history ol { list-style: none; padding: 0; margin: 8px 0 0; max-height: 180px; overflow-y: auto; }
