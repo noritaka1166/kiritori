@@ -1,3 +1,5 @@
+import { defaults, siteKey, createSettingsStore, normalizePaginationLimit, normalizePaginationWait, normalizeMaxFrames, normalizeScrollWait } from "./popup-settings.js";
+
 kiriLocalizeDocument();
 // Chrome sizes extension popups from their content. Wait until that sizing settles
 // before accommodating a window that genuinely has less than 480px available.
@@ -67,16 +69,6 @@ draftClear.addEventListener("click", async () => {
 const siteSettingsEnabled = document.querySelector("#site-settings-enabled");
 const siteSettingsStatus = document.querySelector("#site-settings-status");
 let siteHost = null;
-function siteKey(url) {
-  try {
-    const parsed = new URL(url);
-    return ["http:", "https:"].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null;
-  } catch (error) {
-    if (!(error instanceof TypeError)) throw error;
-    // URLを解析できずホスト名を得られないタブには、サイト別設定を適用しません。
-    return null;
-  }
-}
 const mode = document.querySelector("#capture-mode");
 const format = document.querySelector("#output-format");
 const paginationSetting = document.querySelector("#pagination-setting");
@@ -111,25 +103,7 @@ const failureList = document.querySelector("#failure-list");
 const failureStatus = document.querySelector("#failure-status");
 const clearFailures = document.querySelector("#clear-failures");
 
-const defaults = {
-  mode: "viewport",
-  format: "png",
-  captureDelay: 0,
-  paginationLimit: 20,
-  paginationScope: "viewport",
-  paginationWait: 1500,
-  destination: "save",
-  filenamePattern: "title-date",
-  splitOutput: false,
-  maxFrames: 80,
-  scrollSpeed: "normal",
-  scrollWaitMs: 600,
-  folder: "Screenshots",
-  removeAds: false,
-  manualHide: false,
-  preview: true
-};
-let settingsWrite = Promise.resolve();
+const settingsStore = createSettingsStore(chrome.storage.local);
 let settingsLoaded = false;
 let captureBusy = false;
 let startPending = false;
@@ -305,14 +279,14 @@ function currentSettings() {
     format: format.value,
     captureDelay: Number(captureDelay.value),
     paginationScope: paginationScope.value,
-    paginationLimit: Math.min(50, Math.max(1, Math.floor(Number(paginationLimit.value) || 20))),
-    paginationWait: Math.min(10000, Math.max(500, Math.floor(Number(paginationWait.value) || 1500))),
+    paginationLimit: normalizePaginationLimit(paginationLimit.value),
+    paginationWait: normalizePaginationWait(paginationWait.value),
     destination: destination.value,
     filenamePattern: filenamePattern.value,
     splitOutput: splitOutput.checked,
-    maxFrames: Math.min(200, Math.max(1, Math.floor(Number(maxFramesInput.value) || 80))),
+    maxFrames: normalizeMaxFrames(maxFramesInput.value),
     scrollSpeed: scrollSpeed.value,
-    scrollWaitMs: Math.min(10000, Math.max(0, Number.isFinite(Number(scrollWaitInput.value)) && scrollWaitInput.value !== "" ? Math.floor(Number(scrollWaitInput.value)) : 600)),
+    scrollWaitMs: normalizeScrollWait(scrollWaitInput.value, { emptyIsDefault: true }),
     folder: folder.value,
     removeAds: removeAds.checked,
     manualHide: manualHide.checked,
@@ -320,18 +294,8 @@ function currentSettings() {
   };
 }
 
-async function saveSettings() {
-  const snapshot = currentSettings();
-  const useSite = siteSettingsEnabled.checked && siteHost;
-  settingsWrite = settingsWrite.catch(() => undefined).then(async () => {
-    if (useSite) {
-      const data = await chrome.storage.local.get("siteCaptureSettings");
-      const profiles = Object.assign(Object.create(null), data.siteCaptureSettings && typeof data.siteCaptureSettings === "object" && !Array.isArray(data.siteCaptureSettings) ? data.siteCaptureSettings : {});
-      profiles[siteHost] = snapshot;
-      await chrome.storage.local.set({ siteCaptureSettings: profiles });
-    } else await chrome.storage.local.set({ captureSettings: snapshot });
-  });
-  await settingsWrite;
+function saveSettings() {
+  return settingsStore.save(currentSettings(), siteSettingsEnabled.checked ? siteHost : null);
 }
 
 function persistSettingsFromControls() {
@@ -356,12 +320,12 @@ function applySavedSettings(captureSettings) {
   format.value = selectValue(settings.format, ["png", "jpeg", "pdf"], defaults.format);
   captureDelay.value = String(selectValue(settings.captureDelay, [0, 3, 5], defaults.captureDelay));
   paginationScope.value = selectValue(settings.paginationScope, ["viewport", "full", "scroll-area"], defaults.paginationScope);
-  paginationLimit.value = Math.min(50, Math.max(1, Math.floor(Number(settings.paginationLimit) || 20)));
-  paginationWait.value = Math.min(10000, Math.max(500, Math.floor(Number(settings.paginationWait) || 1500)));
+  paginationLimit.value = normalizePaginationLimit(settings.paginationLimit);
+  paginationWait.value = normalizePaginationWait(settings.paginationWait);
   setSelectValueIfValid(destination, settings.destination, ["save", "copy", "both"]);
   setSelectValueIfValid(filenamePattern, settings.filenamePattern, ["title-date", "date-site-title", "site-date-title"]);
   splitOutput.checked = settings.splitOutput === true;
-  maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(settings.maxFrames) || 80)));
+  maxFramesInput.value = normalizeMaxFrames(settings.maxFrames);
   setSelectValueIfValid(scrollSpeed, settings.scrollSpeed, ["fast", "normal", "slow", "custom"]);
   scrollWaitInput.value = normalizeScrollWait(settings.scrollWaitMs);
   folder.value = settings.folder || defaults.folder;
@@ -378,11 +342,6 @@ function setSelectValueIfValid(select, value, allowedValues) {
   if (allowedValues.includes(value)) select.value = value;
 }
 
-function normalizeScrollWait(value) {
-  const wait = Number(value);
-  return Math.min(10000, Math.max(0, Number.isFinite(wait) ? Math.floor(wait) : 600));
-}
-
 function applyLegacySettings() {
   // 以前の版のポップアップ設定を引き継ぎます。
   folder.value = localStorage.getItem("capture-folder") || defaults.folder;
@@ -390,7 +349,7 @@ function applyLegacySettings() {
 }
 
 async function loadSettings() {
-  const [tabs, data] = await Promise.all([chrome.tabs.query({ active: true, lastFocusedWindow: true }), chrome.storage.local.get(["captureSettings", "siteCaptureSettings"])]);
+  const [tabs, data] = await Promise.all([chrome.tabs.query({ active: true, lastFocusedWindow: true }), settingsStore.load()]);
   siteHost = siteKey(tabs[0]?.url);
   const profiles = data.siteCaptureSettings;
   const hasProfile = Boolean(siteHost && profiles && Object.hasOwn(profiles, siteHost));
@@ -404,14 +363,11 @@ siteSettingsEnabled.addEventListener("change", async () => {
   if (!siteHost || !settingsLoaded) return;
   siteSettingsEnabled.disabled = true;
   try {
-    await settingsWrite.catch(() => undefined);
+    await settingsStore.wait();
     if (siteSettingsEnabled.checked) { await saveSettings(); }
     else {
-      const data = await chrome.storage.local.get(["siteCaptureSettings", "captureSettings"]);
-      const profiles = Object.assign(Object.create(null), data.siteCaptureSettings && typeof data.siteCaptureSettings === "object" && !Array.isArray(data.siteCaptureSettings) ? data.siteCaptureSettings : {});
-      delete profiles[siteHost];
-      await chrome.storage.local.set({ siteCaptureSettings: profiles });
-      applySettings(data.captureSettings || defaults);
+      const globalSettings = await settingsStore.removeSite(siteHost);
+      applySettings(globalSettings || defaults);
     }
   } catch (error) {
     console.error("サイト別設定を保存できませんでした。", error);
@@ -454,8 +410,8 @@ destination.addEventListener("change", () => { updateControls(); persistSettings
 filenamePattern.addEventListener("change", persistSettingsFromControls);
 splitOutput.addEventListener("change", persistSettingsFromControls);
 scrollSpeed.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
-scrollWaitInput.addEventListener("change", () => { const value = scrollWaitInput.value === "" ? 600 : Number(scrollWaitInput.value); scrollWaitInput.value = Math.min(10000, Math.max(0, Number.isFinite(value) ? Math.floor(value) : 600)); persistSettingsFromControls(); });
-maxFramesInput.addEventListener("change", () => { maxFramesInput.value = Math.min(200, Math.max(1, Math.floor(Number(maxFramesInput.value) || 80))); persistSettingsFromControls(); });
+scrollWaitInput.addEventListener("change", () => { scrollWaitInput.value = normalizeScrollWait(scrollWaitInput.value, { emptyIsDefault: true }); persistSettingsFromControls(); });
+maxFramesInput.addEventListener("change", () => { maxFramesInput.value = normalizeMaxFrames(maxFramesInput.value); persistSettingsFromControls(); });
 folder.addEventListener("change", persistSettingsFromControls);
 removeAds.addEventListener("change", persistSettingsFromControls);
 manualHide.addEventListener("change", persistSettingsFromControls);
