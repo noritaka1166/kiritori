@@ -38,7 +38,10 @@
     </div>
     <output id="status" aria-live="polite">画像を読み込んでいます…</output>
     <output id="warning" class="warning" aria-live="polite" hidden></output>
-    <section class="pages-scroll" tabindex="0" aria-label="プレビュー画像"><div id="pages" class="pages"></div></section>
+    <label id="preview-scroll-control" class="preview-scroll-control" hidden>画像を左右に移動
+      <input id="preview-scroll" type="range" min="0" max="0" value="0" aria-controls="preview-scroll-area">
+    </label>
+    <section id="preview-scroll-area" class="pages-scroll" aria-label="プレビュー画像"><div id="pages" class="pages"></div></section>
   </main>
   <script src="i18n.js"></script>
   <script src="pagination-preview.js" type="module"></script>

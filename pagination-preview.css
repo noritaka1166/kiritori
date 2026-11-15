@@ -25,7 +25,9 @@ main { max-width: 1200px; margin: auto; padding: 20px; }
 .warning { padding: 10px 12px; background: #fff4d6; border-radius: 6px; }
 .zoom-control { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .zoom-control select { font: inherit; padding: 7px; border: 1px solid #c5cad2; border-radius: 7px; background: white; }
-.zoom-control select:focus-visible, .pages-scroll:focus-visible { outline: 3px solid #9bbfff; outline-offset: 2px; }
+.zoom-control select:focus-visible, .preview-scroll-control input:focus-visible { outline: 3px solid #9bbfff; outline-offset: 2px; }
+.preview-scroll-control { display: flex; align-items: center; gap: 8px; margin: 8px 0; color: #5f6368; font-size: 13px; }
+.preview-scroll-control input { width: min(240px, 50%); }
 .pages-scroll { overflow-x: auto; }
 .pages { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; padding: 12px 0 32px; }
 .page { margin: 0 auto; width: var(--preview-width, 100%); max-width: var(--preview-max-width, 1000px); flex: none; }

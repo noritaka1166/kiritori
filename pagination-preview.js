@@ -3,6 +3,18 @@ import { closeCaptureView } from "./capture-view.js";
 kiriLocalizeDocument();
 const jobId = new URLSearchParams(location.search).get("job");
 const pages = document.querySelector("#pages");
+const scrollArea = document.querySelector("#preview-scroll-area");
+const scrollControl = document.querySelector("#preview-scroll-control");
+const scrollInput = document.querySelector("#preview-scroll");
+function updateScrollControl() {
+  const max = Math.max(0, scrollArea.scrollWidth - scrollArea.clientWidth);
+  scrollControl.hidden = max === 0;
+  scrollInput.max = String(max);
+  scrollInput.value = String(scrollArea.scrollLeft);
+}
+scrollInput.addEventListener("input", () => { scrollArea.scrollLeft = Number(scrollInput.value); });
+scrollArea.addEventListener("scroll", updateScrollControl, { passive: true });
+window.addEventListener("resize", updateScrollControl);
 const statusOutput = document.querySelector("#status");
 const warning = document.querySelector("#warning");
 const save = document.querySelector("#save");
@@ -42,12 +54,14 @@ function render() {
     viewport.append(image); figure.append(caption, viewport); fragment.append(figure);
   }
   pages.replaceChildren(fragment);
+  updateScrollControl();
 }
 
 previewZoom.addEventListener("change", () => {
   const scale = Number(previewZoom.value) / 100;
   pages.style.setProperty("--preview-width", `${scale * 100}%`);
   pages.style.setProperty("--preview-max-width", `${scale * 1000}px`);
+  updateScrollControl();
 });
 function goToPage() {
   if (!data) return;
