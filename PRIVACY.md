@@ -11,7 +11,7 @@ KiriTori は、ユーザーが指定したウェブページを撮影、編集�
 ### 取り扱うデータと利用目的
 
 - **ページの内容と撮影画像:** ユーザーが撮影を開始したとき、対象タブの表示内容やページ情報にアクセスし、撮影範囲の選択、スクロール撮影、ページ送り、ファイル名の作成などに利用します。画像には個人情報や機密情報が含まれる場合があります。撮影と画像処理はブラウザー内で行います。
-- **編集下書き:** 編集画面の元画像、編集内容、ページタイトルなどの情報、出力設定、更新日時を端末内に保存して、編集の復元に利用します。元画像には、塗りつぶしやぼかしを適用する前の内容が含まれます。
+- **編集下書き:** 編集画面の元画像、編集内容、ページタイトルと URL などの情報、出力設定、更新日時を端末内に保存して、編集の復元に利用します。URL には検索語や識別子などが含まれる場合があります。元画像には、塗りつぶしやぼかしを適用する前の内容が含まれます。
 - **設定:** 撮影や出力の設定、下書きの保存期間、登録した色を端末内に保存します。サイト別設定を有効にした場合は、設定を適用するためにサイトのホスト名も保存します。
 - **失敗履歴:** 撮影の失敗を確認できるよう、日時、撮影範囲、処理段階、利用可能な原因と対処方法を端末内に最大 10 件保存します。撮影画像、ページの URL・タイトル、エラーの原文は失敗履歴に記録しません。
 
@@ -42,7 +42,7 @@ KiriTori is a Chrome extension for capturing, editing, and saving web pages sele
 ### Data handled and purposes
 
 - **Page content and captures:** When you initiate a capture, KiriTori accesses the target tab's visible content and page information to select the capture area, capture scrolling content, navigate pages, and create file names. Captures may contain personal or sensitive information. Capturing and image processing take place in your browser.
-- **Editing drafts:** KiriTori stores the original image, edits, information such as the page title, output settings, and update time on your device so you can restore your work. The original image contains content from before any fill or blur was applied.
+- **Editing drafts:** KiriTori stores the original image, edits, information such as the page title and URL, output settings, and update time on your device so you can restore your work. URLs may contain search terms, identifiers, or other information. The original image contains content from before any fill or blur was applied.
 - **Settings:** Capture and output settings, draft retention preferences, and saved colors are stored on your device. If you enable site-specific settings, the site's hostname is also stored to apply those settings.
 - **Failure history:** Up to 10 entries are stored on your device to help you understand capture failures. These include the time, capture scope, processing stage, and available reasons and suggestions. Captures, page URLs and titles, and raw error messages are not recorded in this history.
 
