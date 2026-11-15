@@ -1479,17 +1479,14 @@ function cancelManualSelection(jobId) {
 }
 
 async function restoreStaleScrollAreaState() {
-  await cancelStaleScrollAreaPicker();
+  if (window.__kiritoriScrollSelector?.cancel) {
+    window.__kiritoriScrollSelector.cancel();
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
   restoreAreaMarkers();
   restoreStickyMarkers();
   restoreInteractionStyles();
   restoreStaleCapture();
-
-  async function cancelStaleScrollAreaPicker() {
-    if (!window.__kiritoriScrollSelector?.cancel) return;
-    window.__kiritoriScrollSelector.cancel();
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  }
 
   function restoreAreaMarkers() {
     document.querySelectorAll("[data-kiritori-scroll-state]").forEach(restoreAreaMarker);
