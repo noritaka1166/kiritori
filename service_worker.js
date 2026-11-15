@@ -1454,9 +1454,17 @@ async function selectElementsToHide(jobId, labels) {
     state.port = chrome.runtime.connect({ name: "kiritori-selector" });
     state.port.onDisconnect.addListener(() => { if (!state.settled) state.restore(); });
     state.port.postMessage({ type: "hello", jobId });
-    state.timer = setInterval(() => { try { state.port.postMessage({ type: "heartbeat" }); } catch (_) { state.restore(); } }, 20_000);
-  } catch (_) {
+    state.timer = setInterval(() => {
+      try {
+        state.port.postMessage({ type: "heartbeat" });
+      } catch (error) {
+        console.warn("手動選択用の拡張機能接続が切断されました。", error);
+        state.restore();
+      }
+    }, 20_000);
+  } catch (error) {
     // A missing extension connection means the picker can no longer be controlled.
+    console.warn("手動選択用の拡張機能接続を初期化できませんでした。", error);
     state.restore();
   }
 
