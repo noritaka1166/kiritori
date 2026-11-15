@@ -1221,73 +1221,68 @@ function paginationSnapshot() {
 }
 
 function clickPaginationButton(button) {
-  const element = findPaginationTarget(button);
-  if (!element) return "missing";
-  if (isDisabledPaginationTarget(element)) return "end";
-  if (!hasSafePaginationLink(element)) return "missing";
-  setTimeout(() => dispatchPaginationClick(element), 0);
-  return "clicked";
-
-  function findPaginationTarget(target) {
+  const findPaginationTarget = () => {
     try {
-      const direct = document.querySelector(target.selector);
-      if (direct && direct.localName === target.tag) {
+      const direct = document.querySelector(button.selector);
+      if (direct && direct.localName === button.tag) {
         const label = (direct.getAttribute("aria-label") || direct.dataset.tooltip || direct.getAttribute("title") || direct.textContent || direct.value || "").trim().slice(0, 120);
-        if (label === target.label) return direct;
+        if (label === button.label) return direct;
       }
-      if (!target.fallback) return null;
-      const candidates = document.querySelectorAll(target.fallback);
+      if (!button.fallback) return null;
+      const candidates = document.querySelectorAll(button.fallback);
       const fallback = candidates.length === 1 ? candidates[0] : null;
-      if (!fallback || fallback.localName !== target.tag) return null;
+      if (!fallback || fallback.localName !== button.tag) return null;
       const label = (fallback.getAttribute("aria-label") || fallback.dataset.tooltip || fallback.getAttribute("title") || fallback.textContent || fallback.value || "").trim().slice(0, 120);
-      return label === target.label ? fallback : null;
+      return label === button.label ? fallback : null;
     } catch (error) {
       if (!(error instanceof DOMException) || error.name !== "SyntaxError") throw error;
       // Page-provided selectors may become invalid after client-side navigation.
       return null;
     }
-  }
-
-  function isDisabledPaginationTarget(target) {
-    return target.matches(":disabled, [disabled], [aria-disabled=true], .disabled") ||
-      target.closest('[aria-disabled="true"], [inert], .disabled') ||
-      !target.getClientRects().length ||
-      getComputedStyle(target).visibility !== "visible";
-  }
-
-  function hasSafePaginationLink(target) {
-    if (target.localName !== "a") return true;
-    if (target.target && target.target.toLowerCase() !== "_self") return false;
-    const href = target.getAttribute("href");
+  };
+  const element = findPaginationTarget();
+  if (!element) return "missing";
+  const isDisabledPaginationTarget = () => element.matches(":disabled, [disabled], [aria-disabled=true], .disabled") ||
+    element.closest('[aria-disabled="true"], [inert], .disabled') ||
+    !element.getClientRects().length ||
+    getComputedStyle(element).visibility !== "visible";
+  if (isDisabledPaginationTarget()) return "end";
+  const hasSafePaginationLink = () => {
+    if (element.localName !== "a") return true;
+    if (element.target && element.target.toLowerCase() !== "_self") return false;
+    const href = element.getAttribute("href");
     if (!href) return true;
     try {
       const url = new URL(href, location.href);
       return ["http:", "https:"].includes(url.protocol) && url.origin === location.origin;
-    } catch (_) {
+    } catch (error) {
+      if (!(error instanceof TypeError)) throw error;
       // Ignore malformed page-provided href values.
       return false;
     }
-  }
-
-  function dispatchPaginationClick(target) {
-    if (!target.isConnected) return;
-    const rect = target.getBoundingClientRect();
+  };
+  if (!hasSafePaginationLink()) return "missing";
+  const dispatchPaginationClick = () => {
+    if (!element.isConnected) return;
+    const rect = element.getBoundingClientRect();
     const eventOptions = {
       bubbles: true, cancelable: true, composed: true, view: window, button: 0,
       clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2
     };
     if (typeof PointerEvent === "function") {
-      target.dispatchEvent(new PointerEvent("pointerdown", { ...eventOptions, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 1 }));
+      element.dispatchEvent(new PointerEvent("pointerdown", { ...eventOptions, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 1 }));
     }
-    if (!target.isConnected) return;
-    target.dispatchEvent(new MouseEvent("mousedown", { ...eventOptions, buttons: 1, detail: 1 }));
-    if (!target.isConnected) return;
+    if (!element.isConnected) return;
+    element.dispatchEvent(new MouseEvent("mousedown", { ...eventOptions, buttons: 1, detail: 1 }));
+    if (!element.isConnected) return;
     if (typeof PointerEvent === "function") {
-      target.dispatchEvent(new PointerEvent("pointerup", { ...eventOptions, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 0 }));
+      element.dispatchEvent(new PointerEvent("pointerup", { ...eventOptions, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 0 }));
     }
-    target.dispatchEvent(new MouseEvent("mouseup", { ...eventOptions, buttons: 0, detail: 1 }));
-    if (target.isConnected) target.dispatchEvent(new MouseEvent("click", { ...eventOptions, buttons: 0, detail: 1 }));
-  }
+    element.dispatchEvent(new MouseEvent("mouseup", { ...eventOptions, buttons: 0, detail: 1 }));
+    if (element.isConnected) element.dispatchEvent(new MouseEvent("click", { ...eventOptions, buttons: 0, detail: 1 }));
+  };
+  setTimeout(dispatchPaginationClick, 0);
+  return "clicked";
 }
 async function assertTabStillActive(tabId, windowId) {
   const tabs = await chrome.tabs.query({ active: true, windowId });
