@@ -56,6 +56,7 @@ const textResizeHandle = document.querySelector("#text-resize-handle");
 const textRotateHandle = document.querySelector("#text-rotate-handle");
 const textRotateLine = document.querySelector("#text-rotate-line");
 const toolButtons = [...document.querySelectorAll("[data-tool]")];
+const currentToolName = document.querySelector("#current-tool-name");
 const context = canvas.getContext("2d", { alpha: false });
 
 let draftDb, draftData, draftSourceUrl;
@@ -253,6 +254,7 @@ function selectTool(next) {
   updateToolSettings();
   if (next !== "select") selectedIndex = null;
   for (const button of toolButtons) button.setAttribute("aria-pressed", String(button.dataset.tool === tool));
+  currentToolName.textContent = toolButtons.find((button) => button.dataset.tool === tool)?.textContent || "";
   hint.textContent = labels[tool];
   if (sourceImage) renderObjectSelection(currentState());
 }
