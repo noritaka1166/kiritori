@@ -1051,5 +1051,11 @@
   },
   "draft_clear_confirm": {
     "message": "すべて削除"
+  },
+  "pagination_preview_zoom": {
+    "message": "表示倍率"
+  },
+  "pagination_preview_image": {
+    "message": "プレビュー画像"
   }
 }

@@ -13,6 +13,7 @@ const single = document.querySelector("#single");
 const stacked = document.querySelector("#stacked");
 const pager = document.querySelector("#pager");
 const counter = document.querySelector("#counter");
+const previewZoom = document.querySelector("#preview-zoom");
 let port, heartbeat, data, current = 0, mode = "single", submitted = false, terminal = false;
 
 function render() {
@@ -39,6 +40,11 @@ function render() {
   pages.replaceChildren(fragment);
 }
 
+previewZoom.addEventListener("change", () => {
+  const scale = Number(previewZoom.value) / 100;
+  pages.style.setProperty("--preview-width", `${scale * 100}%`);
+  pages.style.setProperty("--preview-max-width", `${scale * 1000}px`);
+});
 single.addEventListener("click", () => { mode = "single"; render(); });
 stacked.addEventListener("click", () => { mode = "stacked"; render(); });
 previous.addEventListener("click", () => { current = Math.max(0, current - 1); render(); });

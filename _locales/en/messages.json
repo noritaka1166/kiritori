@@ -1051,5 +1051,11 @@
   },
   "draft_clear_confirm": {
     "message": "Delete all"
+  },
+  "pagination_preview_zoom": {
+    "message": "Zoom"
+  },
+  "pagination_preview_image": {
+    "message": "Preview images"
   }
 }

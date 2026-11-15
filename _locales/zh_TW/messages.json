@@ -1051,5 +1051,11 @@
   },
   "draft_clear_confirm": {
     "message": "全部刪除"
+  },
+  "pagination_preview_zoom": {
+    "message": "顯示比例"
+  },
+  "pagination_preview_image": {
+    "message": "預覽影像"
   }
 }

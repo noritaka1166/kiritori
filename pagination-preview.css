@@ -21,8 +21,12 @@ main { max-width: 1200px; margin: auto; padding: 20px; }
 #counter { min-width: 90px; text-align: center; font-variant-numeric: tabular-nums; }
 #status, .warning { display: block; margin-block: 1em; font-size: 14px; line-height: 1.5; }
 .warning { padding: 10px 12px; background: #fff4d6; border-radius: 6px; }
-.pages { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 12px 0 32px; }
-.page { margin: 0; width: min(100%, 1000px); }
+.zoom-control { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.zoom-control select { font: inherit; padding: 7px; border: 1px solid #c5cad2; border-radius: 7px; background: white; }
+.zoom-control select:focus-visible, .pages-scroll:focus-visible { outline: 3px solid #9bbfff; outline-offset: 2px; }
+.pages-scroll { overflow-x: auto; }
+.pages { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; padding: 12px 0 32px; }
+.page { margin: 0 auto; width: var(--preview-width, 100%); max-width: var(--preview-max-width, 1000px); flex: none; }
 .page figcaption { color: #5f6368; font-size: 13px; margin: 0 0 6px; }
 .page-window { position: relative; overflow: hidden; width: 100%; background: white; box-shadow: 0 2px 12px #23334a26; }
 .page-window img { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; }

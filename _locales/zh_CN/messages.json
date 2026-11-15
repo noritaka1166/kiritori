@@ -1051,5 +1051,11 @@
   },
   "draft_clear_confirm": {
     "message": "全部删除"
+  },
+  "pagination_preview_zoom": {
+    "message": "显示比例"
+  },
+  "pagination_preview_image": {
+    "message": "预览图像"
   }
 }

@@ -19,6 +19,16 @@
         <button id="single" type="button" aria-pressed="true">１枚ずつ</button>
         <button id="stacked" type="button" aria-pressed="false">縦に並べる</button>
       </fieldset>
+      <label class="zoom-control" for="preview-zoom">表示倍率
+        <select id="preview-zoom">
+          <option value="50">50%</option>
+          <option value="75">75%</option>
+          <option value="100" selected>100%</option>
+          <option value="125">125%</option>
+          <option value="150">150%</option>
+          <option value="200">200%</option>
+        </select>
+      </label>
       <div id="pager" class="pager">
         <button id="previous" type="button" aria-label="前のページ">←</button>
         <span id="counter" aria-live="polite"></span>
@@ -27,7 +37,7 @@
     </div>
     <output id="status" aria-live="polite">画像を読み込んでいます…</output>
     <output id="warning" class="warning" aria-live="polite" hidden></output>
-    <div id="pages" class="pages"></div>
+    <div class="pages-scroll" tabindex="0" aria-label="プレビュー画像"><div id="pages" class="pages"></div></div>
   </main>
   <script src="i18n.js"></script>
   <script src="pagination-preview.js" type="module"></script>
