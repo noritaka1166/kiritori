@@ -1231,22 +1231,21 @@ function clickPaginationButton(button) {
   function findPaginationTarget(target) {
     try {
       const direct = document.querySelector(target.selector);
-      if (matchesTarget(direct, target)) return direct;
+      if (direct && direct.localName === target.tag) {
+        const label = (direct.getAttribute("aria-label") || direct.dataset.tooltip || direct.getAttribute("title") || direct.textContent || direct.value || "").trim().slice(0, 120);
+        if (label === target.label) return direct;
+      }
       if (!target.fallback) return null;
       const candidates = document.querySelectorAll(target.fallback);
       const fallback = candidates.length === 1 ? candidates[0] : null;
-      return matchesTarget(fallback, target) ? fallback : null;
+      if (!fallback || fallback.localName !== target.tag) return null;
+      const label = (fallback.getAttribute("aria-label") || fallback.dataset.tooltip || fallback.getAttribute("title") || fallback.textContent || fallback.value || "").trim().slice(0, 120);
+      return label === target.label ? fallback : null;
     } catch (error) {
       if (!(error instanceof DOMException) || error.name !== "SyntaxError") throw error;
       // Page-provided selectors may become invalid after client-side navigation.
       return null;
     }
-  }
-
-  function matchesTarget(element, target) {
-    if (!element || element.localName !== target.tag) return false;
-    const label = (element.getAttribute("aria-label") || element.dataset.tooltip || element.getAttribute("title") || element.textContent || element.value || "").trim().slice(0, 120);
-    return label === target.label;
   }
 
   function isDisabledPaginationTarget(target) {
