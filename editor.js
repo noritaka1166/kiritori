@@ -8,6 +8,16 @@ const restoredDraftId = new URLSearchParams(location.search).get("draft");
 const canvas = document.querySelector("#canvas");
 const wrap = document.querySelector("#canvas-wrap");
 const workspace = document.querySelector("#workspace");
+const workspaceScroll = document.querySelector("#workspace-scroll");
+const workspaceScrollControl = document.querySelector("#workspace-scroll-control");
+function updateWorkspaceScroll() {
+  const max = Math.max(0, workspace.scrollWidth - workspace.clientWidth);
+  workspaceScrollControl.hidden = max === 0;
+  workspaceScroll.max = String(max);
+  workspaceScroll.value = String(workspace.scrollLeft);
+}
+workspaceScroll.addEventListener("input", () => { workspace.scrollLeft = Number(workspaceScroll.value); });
+workspace.addEventListener("scroll", updateWorkspaceScroll, { passive: true });
 const editorZoom = document.querySelector("#editor-zoom");
 const overlay = document.querySelector("#overlay");
 const selection = document.querySelector("#selection");
@@ -285,6 +295,7 @@ function updateCanvasDisplaySize(crop) {
   const available = Math.max(1, workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
   const scale = Number(editorZoom.value) / 100;
   wrap.style.width = `${Math.min(crop.width, 1100, available) * scale}px`;
+  updateWorkspaceScroll();
 }
 
 function refreshCanvasDisplaySize() {

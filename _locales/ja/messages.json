@@ -1105,5 +1105,8 @@
   },
   "draft_search_count": {
     "message": "$1件の下書きが見つかりました。"
+  },
+  "editor_scroll_horizontal": {
+    "message": "画像を左右に移動"
   }
 }

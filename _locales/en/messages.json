@@ -1105,5 +1105,8 @@
   },
   "draft_search_count": {
     "message": "Found $1 drafts."
+  },
+  "editor_scroll_horizontal": {
+    "message": "Move image horizontally"
   }
 }

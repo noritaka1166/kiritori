@@ -88,7 +88,10 @@
           <option value="125">125%</option><option value="150">150%</option><option value="200">200%</option>
         </select>
       </label>
-      <div id="workspace" class="workspace" role="region" tabindex="0" aria-label="画像編集エリア">
+      <label id="workspace-scroll-control" class="workspace-scroll-control" hidden>画像を左右に移動
+        <input id="workspace-scroll" type="range" min="0" max="0" value="0" aria-controls="workspace">
+      </label>
+      <section id="workspace" class="workspace" aria-label="画像編集エリア">
         <div id="canvas-wrap" class="canvas-wrap">
           <canvas id="canvas" aria-label="撮影画像のプレビュー"></canvas>
           <input id="inline-text" type="text" maxlength="200" aria-label="画像に入れる文字" autocomplete="off" hidden>
@@ -108,7 +111,7 @@
             </g>
           </svg>
         </div>
-      </div>
+      </section>
       <p class="privacy-note">塗りつぶしは不透明です。マーカーは半透明で内容が見えます。隠したい部分が覆われているか、出力前に確認してください。</p>
       <a id="fallback" hidden download="KiriTori.png">編集画像をPNGで保存</a>
     </main>

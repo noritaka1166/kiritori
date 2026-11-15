@@ -1105,5 +1105,8 @@
   },
   "draft_search_count": {
     "message": "找到 $1 筆草稿。"
+  },
+  "editor_scroll_horizontal": {
+    "message": "左右移動影像"
   }
 }
