@@ -2063,32 +2063,17 @@ function restoreScrollableArea(jobId) {
   if (state.interactionStyle?.isConnected) state.interactionStyle.remove();
   document.querySelectorAll("style[data-kiritori-scroll-interaction]").forEach(restoreInteractionStyle);
   document.querySelectorAll("[data-kiritori-scroll-sticky]").forEach(restoreStickyElement);
-  restoreSelectedArea(state);
+  restoreSelectedArea();
   delete window.__kiritoriScrollCapture;
   return true;
 
   function restoreInteractionStyle(style) {
-    let saved;
-    try {
-      saved = JSON.parse(style.dataset.kiritoriScrollInteraction || "null");
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) throw error;
-      // Ignore malformed marker data left by a page or an interrupted capture.
-      return;
-    }
-    if (saved?.owner === "kiritori" && saved.version === 1 && saved.jobId === jobId) style.remove();
+    if (parseMarker(style, "kiritoriScrollInteraction", true)) style.remove();
   }
 
   function restoreStickyElement(element) {
-    let saved;
-    try {
-      saved = JSON.parse(element.dataset.kiritoriScrollSticky || "null");
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) throw error;
-      // Ignore malformed marker data left by a page or an interrupted capture.
-      return;
-    }
-    if (saved?.owner !== "kiritori" || saved.version !== 1 || saved.jobId !== jobId) return;
+    const saved = parseMarker(element, "kiritoriScrollSticky", true);
+    if (!saved) return;
     if (element.style.getPropertyValue("visibility") === "hidden" && element.style.getPropertyPriority("visibility") === "important") {
       if (saved.visibility) element.style.setProperty("visibility", saved.visibility, saved.visibilityPriority);
       else element.style.removeProperty("visibility");
@@ -2098,7 +2083,8 @@ function restoreScrollableArea(jobId) {
     else element.dataset.kiritoriScrollSticky = saved.previousMarker;
   }
 
-  function restoreSelectedArea(captureState) {
+  function restoreSelectedArea() {
+    const captureState = state;
     const element = captureState.element;
     if (!element?.isConnected) return;
     element.scrollTop = captureState.originalTop;
@@ -2109,17 +2095,24 @@ function restoreScrollableArea(jobId) {
       if (!captureState.hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
     }
     if (!captureState.markerName) return;
+    const saved = parseMarker(element, "kiritoriScrollState", false);
+    if (!saved) return;
+    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
+    else element.dataset.kiritoriScrollState = saved.previousMarker;
+  }
+
+  function parseMarker(element, key, requireJob) {
     let saved;
     try {
-      saved = JSON.parse(element.dataset.kiritoriScrollState || "null");
+      saved = JSON.parse(element.dataset[key] || "null");
     } catch (error) {
       if (!(error instanceof SyntaxError)) throw error;
       // Ignore malformed marker data left by a page or an interrupted capture.
-      return;
+      return null;
     }
-    if (saved?.owner !== "kiritori" || saved.version !== 1) return;
-    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
-    else element.dataset.kiritoriScrollState = saved.previousMarker;
+    if (saved?.owner !== "kiritori" || saved.version !== 1) return null;
+    if (requireJob && saved.jobId !== jobId) return null;
+    return saved;
   }
 }
 function restoreManualHiddenElements(jobId) {
