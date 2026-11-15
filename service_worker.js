@@ -1783,12 +1783,12 @@ function selectScrollableArea(jobId, labels) {
       window.addEventListener("keydown", onKey, true);
       try {
         state.port = chrome.runtime.connect({ name: "kiritori-selector" });
-        state.port.onDisconnect.addListener(() => { if (!state.settled) void state.cancel(); });
+        state.port.onDisconnect.addListener(() => { if (!state.settled) state.cancel(); });
         state.port.postMessage({ type: "hello", jobId });
-        state.timer = setInterval(() => { try { state.port.postMessage({ type: "heartbeat" }); } catch (_) { void state.cancel(); } }, 20_000);
+        state.timer = setInterval(() => { try { state.port.postMessage({ type: "heartbeat" }); } catch (_) { state.cancel(); } }, 20_000);
       } catch (_) {
         // A missing extension connection means the picker can no longer be controlled.
-        void state.cancel();
+        state.cancel();
       }
     });
   }
