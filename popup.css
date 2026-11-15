@@ -74,8 +74,10 @@ output[aria-live="polite"] { display: block; }
 .failure-history button { border-color: #e5b3ad; color: #a3221a; }
 .failure-history button:hover, #draft-clear:hover, .draft-row button:hover { background: #f1f5fc; }
 #failure-status { margin: 5px 0 0; color: #a3221a; font-size: 12px; }
-.draft-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-.draft-row span { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 12px; }
+.draft-row { display: grid; gap: 4px; min-width: 0; margin-top: 10px; padding-top: 10px; border-top: 1px solid #edf1f7; }
+.draft-title { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 650; }
+.draft-date { color: #68788f; font-size: 12px; }
+.draft-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 #draft-clear { margin-top: 8px; }
 @media (max-height: 430px) { header { padding-top: 9px; padding-bottom: 8px; } header p { display: none; } .capture-footer { padding-top: 8px; padding-bottom: 8px; } }
 

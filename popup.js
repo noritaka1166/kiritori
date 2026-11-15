@@ -36,7 +36,9 @@ async function refreshDrafts() {
     draftListStatus.textContent = drafts.length ? kiriT("保存された下書き") : kiriT("保存された下書きはありません。");
     for (const draft of drafts) {
       const row = document.createElement("div"); row.className = "draft-row";
-      const title = document.createElement("span"); title.textContent = `${draft.meta?.title || "KiriTori"} · ${new Date(draft.updatedAt).toLocaleString(chrome.i18n.getUILanguage())}`;
+      const title = document.createElement("div"); title.className = "draft-title"; title.textContent = draft.meta?.title || "KiriTori";
+      const date = document.createElement("div"); date.className = "draft-date"; date.textContent = new Date(draft.updatedAt).toLocaleString(chrome.i18n.getUILanguage());
+      const actions = document.createElement("div"); actions.className = "draft-actions";
       const open = document.createElement("button"); open.className = "draft-open"; open.type = "button"; open.textContent = kiriT("復元");
       open.addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL(`editor.html?draft=${encodeURIComponent(draft.id)}`) }));
       const remove = document.createElement("button"); remove.className = "draft-remove"; remove.type = "button"; remove.textContent = kiriT("削除");
@@ -47,7 +49,7 @@ async function refreshDrafts() {
         draftClearConfirm.textContent = kiriT("削除");
         draftClearDialog.showModal();
       });
-      row.append(title, open, remove); draftList.append(row);
+      actions.append(open, remove); row.append(title, date, actions); draftList.append(row);
     }
   } catch (error) {
     console.error("下書きを読み込めませんでした。", error);
