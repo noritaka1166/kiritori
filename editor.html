@@ -11,13 +11,14 @@
     <header class="header">
       <div class="brand"><img src="icons/icon-bird.svg" width="32" height="32" alt=""><div><strong>KiriTori</strong><span>プレビューと編集</span></div></div>
       <div class="actions">
+        <button id="open-tools" type="button" class="secondary">編集ツール</button>
         <button id="cancel" type="button" class="secondary">キャンセル</button>
         <button id="retake" type="button" class="secondary" disabled>撮り直す</button>
         <button id="export" type="button" class="primary" disabled>出力</button>
       </div>
     </header>
     <main>
-      <details class="editor-panel" open>
+      <details id="tools-panel" class="editor-panel" open>
         <summary><span><span>編集ツール</span> · <span id="current-tool-name">切り抜き</span></span></summary>
       <section class="toolbar" aria-label="編集ツール">
         <div class="tool-groups">

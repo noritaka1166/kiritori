@@ -56,6 +56,12 @@ const textResizeHandle = document.querySelector("#text-resize-handle");
 const textRotateHandle = document.querySelector("#text-rotate-handle");
 const textRotateLine = document.querySelector("#text-rotate-line");
 const toolButtons = [...document.querySelectorAll("[data-tool]")];
+const toolsPanel = document.querySelector("#tools-panel");
+document.querySelector("#open-tools").addEventListener("click", () => {
+  toolsPanel.open = true;
+  toolsPanel.scrollIntoView({ block: "start", behavior: "smooth" });
+  toolsPanel.querySelector("summary").focus({ preventScroll: true });
+});
 const currentToolName = document.querySelector("#current-tool-name");
 const context = canvas.getContext("2d", { alpha: false });
 
