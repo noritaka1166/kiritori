@@ -1557,9 +1557,11 @@ async function restoreStaleScrollAreaState() {
   restoreStaleCapture();
 }
 function selectScrollableArea(jobId, labels) {
+  const markerOwner = "kiritori";
+  const markerVersion = 1;
+  const emptyMarker = "null";
+  const importantPriority = "important";
   if (window.__kiritoriScrollSelector?.cancel) void window.__kiritoriScrollSelector.cancel();
-  restoreSelectionMarkers();
-  return createScrollableAreaPicker(jobId, labels);
 
   function restoreSelectionMarkers() {
     document.querySelectorAll("[data-kiritori-scroll-sticky]").forEach(restoreStickyMarker);
@@ -1569,18 +1571,20 @@ function selectScrollableArea(jobId, labels) {
 
   function restoreStickyMarker(element) {
     const saved = parseMarker(element.dataset.kiritoriScrollSticky);
-    if (!isOwnedMarker(saved)) return;
+    if (!saved) return;
     restoreInlineStyle(element, "visibility", "hidden", saved.visibility, saved.visibilityPriority, saved.hadStyle);
-    restoreMarker(element, "kiritoriScrollSticky", saved.previousMarker);
+    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollSticky;
+    else element.dataset.kiritoriScrollSticky = saved.previousMarker;
   }
 
   function restoreAreaMarker(element) {
     const saved = parseMarker(element.dataset.kiritoriScrollState);
-    if (!isOwnedMarker(saved)) return false;
+    if (!saved) return false;
     element.scrollTop = saved.originalTop;
     element.scrollLeft = saved.originalLeft;
     restoreInlineStyle(element, "scroll-behavior", "auto", saved.scrollBehavior, saved.scrollPriority, saved.hadStyle);
-    restoreMarker(element, "kiritoriScrollState", saved.previousMarker);
+    if (saved.previousMarker === null) delete element.dataset.kiritoriScrollState;
+    else element.dataset.kiritoriScrollState = saved.previousMarker;
     return true;
   }
 
@@ -1596,30 +1600,26 @@ function selectScrollableArea(jobId, labels) {
     delete window.__kiritoriScrollCapture;
   }
 
-  function parseMarker(value) {
+  const parseMarker = (value) => {
     try {
-      return JSON.parse(value || "null");
-    } catch (_) {
+      const saved = JSON.parse(value || emptyMarker);
+      return saved?.owner === markerOwner && saved.version === markerVersion ? saved : null;
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
       // Ignore malformed marker data left by a page or an interrupted capture.
       return null;
     }
-  }
+  };
 
-  function isOwnedMarker(saved) {
-    return saved?.owner === "kiritori" && saved.version === 1;
-  }
-
-  function restoreInlineStyle(element, property, currentValue, savedValue, savedPriority, hadStyle) {
-    if (element.style.getPropertyValue(property) !== currentValue || element.style.getPropertyPriority(property) !== "important") return;
+  const restoreInlineStyle = (element, property, currentValue, savedValue, savedPriority, hadStyle) => {
+    if (element.style.getPropertyValue(property) !== currentValue || element.style.getPropertyPriority(property) !== importantPriority) return;
     if (savedValue) element.style.setProperty(property, savedValue, savedPriority);
     else element.style.removeProperty(property);
     if (!hadStyle && !element.getAttribute("style")?.trim()) element.removeAttribute("style");
-  }
+  };
 
-  function restoreMarker(element, key, previousMarker) {
-    if (previousMarker === null) delete element.dataset[key];
-    else element.dataset[key] = previousMarker;
-  }
+  restoreSelectionMarkers();
+  return createScrollableAreaPicker(jobId, labels);
 
   function createScrollableAreaPicker(jobId, labels) {
     function getWheelScale(deltaMode) {
