@@ -1993,7 +1993,6 @@ function readScrollableAreaMetrics(jobId) {
 function hideScrollableAreaSticky(jobId) {
   const state = window.__kiritoriScrollCapture;
   if (!state || state.jobId !== jobId || !state.element?.isConnected) return 0;
-  const markerName = "data-kiritori-scroll-sticky";
   let hidden = 0;
   for (const element of state.element.querySelectorAll("*")) {
     const position = getComputedStyle(element).position;
