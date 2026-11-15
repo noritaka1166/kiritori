@@ -59,6 +59,13 @@ const textRotateHandle = document.querySelector("#text-rotate-handle");
 const textRotateLine = document.querySelector("#text-rotate-line");
 const toolButtons = [...document.querySelectorAll("[data-tool]")];
 const toolsPanel = document.querySelector("#tools-panel");
+const editorHeader = document.querySelector(".header");
+function updateCompactHeader() {
+  const compact = editorHeader.classList.contains("compact");
+  editorHeader.classList.toggle("compact", window.scrollY > (compact ? 32 : 80));
+}
+window.addEventListener("scroll", updateCompactHeader, { passive: true });
+updateCompactHeader();
 document.querySelector("#open-tools").addEventListener("click", () => {
   toolsPanel.open = true;
   toolsPanel.scrollIntoView({ block: "start", behavior: "smooth" });
