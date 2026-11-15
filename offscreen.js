@@ -386,7 +386,15 @@ async function finishRegularCapture() {
     if (needsSave && (options.format === "png" || options.format === "jpeg")) {
       const type = options.format === "png" ? "image/png" : "image/jpeg";
       const extension = options.format === "png" ? ".png" : ".jpg";
-      await createRasterFiles(canvas, partCount, partHeight, split, pngBlob, options.format, type, extension, files);
+      await createRasterFiles(canvas, {
+        partCount,
+        partHeight,
+        split,
+        pngBlob,
+        format: options.format,
+        type,
+        extension
+      }, files);
     } else if (needsSave && options.format === "pdf") {
       const blob = await makePdf(canvas, partHeight);
       files.push({ suffix: ".pdf", url: makeObjectUrl(blob) });
@@ -413,17 +421,18 @@ function getOutputPartHeight(meta, split, viewportHeight, scale, canvas) {
   return canvas.height;
 }
 
-function createRasterFiles(canvas, partCount, partHeight, split, pngBlob, format, type, extension, files) {
-  return Array.from({ length: partCount }, (_, index) => index).reduce((sequence, index) => sequence.then(() => {
+async function createRasterFiles(canvas, settings, files) {
+  const { partCount, partHeight, split, pngBlob, format, type, extension } = settings;
+  for (let index = 0; index < partCount; index += 1) {
     const part = split ? sliceCanvas(canvas, index * partHeight, partHeight) : canvas;
-    const blobPromise = !split && pngBlob && format === "png" ? Promise.resolve(pngBlob) : canvasBlob(part, type, 0.92);
-    return blobPromise.then((blob) => {
+    try {
+      const blob = !split && pngBlob && format === "png" ? pngBlob : await canvasBlob(part, type, 0.92);
       const number = split ? `_${String(index + 1).padStart(3, "0")}` : "";
       files.push({ suffix: `${number}${extension}`, url: makeObjectUrl(blob) });
-    }).finally(() => {
+    } finally {
       if (part !== canvas) { part.width = 0; part.height = 0; }
-    });
-  }), Promise.resolve());
+    }
+  }
 }
 
 function revokeFiles(files) {
