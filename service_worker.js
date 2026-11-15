@@ -1147,11 +1147,6 @@ async function updateCountdownOverlay(jobId, remaining, label) {
 }
 
 function selectPaginationButton(jobId, instruction, cancelText) {
-  function findInteractiveTarget(target) {
-    if (!(target instanceof Element)) return null;
-    return target.closest('button, a, [role="button"], [role="link"], input[type="button"], input[type="submit"], [tabindex][aria-label]');
-  }
-
   return new Promise(resolve => {
     const banner = document.createElement("div");
     banner.style.cssText = "all:initial;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#174ea6;color:white;padding:12px 18px;border-radius:8px;font:14px/1.4 system-ui,sans-serif;box-shadow:0 2px 12px #0006;pointer-events:none;";
@@ -1184,7 +1179,9 @@ function selectPaginationButton(jobId, instruction, cancelText) {
     const onPointerDown = event => { event.stopImmediatePropagation(); };
     const onClick = (event) => {
       event.preventDefault(); event.stopImmediatePropagation();
-      const element = findInteractiveTarget(event.target);
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const element = target.closest('button, a, [role="button"], [role="link"], input[type="button"], input[type="submit"], [tabindex][aria-label]');
       if (!element) return;
       finish(describePaginationTarget(element));
     };
