@@ -1012,5 +1012,8 @@
   },
   "m_866257e9ead3b4d1": {
     "message": "Editing drafts"
+  },
+  "capture_delay_custom_seconds": {
+    "message": "Delay (seconds, 1–999)"
   }
 }

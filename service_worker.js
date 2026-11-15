@@ -1,3 +1,4 @@
+import { normalizeCaptureDelay } from "./popup-settings.js";
 import { downloadFile } from "./download-files.js";
 import { validateScrollableAreaBounds, validatePaginatedScrollPosition } from "./capture-validation.js";
 import "./i18n.js";
@@ -499,7 +500,7 @@ function clearTabBadgeTimer(tabId) {
 }
 
 async function prepareCaptureTab(tab, options, job) {
-  const seconds = [3, 5].includes(options.captureDelay) ? options.captureDelay : 0;
+  const seconds = normalizeCaptureDelay(options.captureDelay);
   if (seconds) await runCaptureCountdown(tab, job, seconds, options);
   else {
     reportCapture(job);

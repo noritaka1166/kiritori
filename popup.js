@@ -1,6 +1,6 @@
 import { createCaptureStatusTracker } from "./capture-status.js";
 import { shouldShowCaptureProgress, getProgressMessage } from "./popup-progress.js";
-import { defaults, siteKey, createSettingsStore, normalizePaginationLimit, normalizePaginationWait, normalizeMaxFrames, normalizeScrollWait } from "./popup-settings.js";
+import { defaults, siteKey, createSettingsStore, normalizeCaptureDelay, normalizePaginationLimit, normalizePaginationWait, normalizeMaxFrames, normalizeScrollWait } from "./popup-settings.js";
 
 kiriLocalizeDocument();
 // Chrome sizes extension popups from their content. Wait until that sizing settles
@@ -78,6 +78,8 @@ const paginationLimit = document.querySelector("#pagination-limit");
 const paginationScope = document.querySelector("#pagination-scope");
 const paginationWait = document.querySelector("#pagination-wait");
 const captureDelay = document.querySelector("#capture-delay");
+const captureDelayCustom = document.querySelector("#capture-delay-custom");
+const captureDelaySeconds = document.querySelector("#capture-delay-seconds");
 const destination = document.querySelector("#destination");
 const filenamePattern = document.querySelector("#filename-pattern");
 const scrollSpeed = document.querySelector("#scroll-speed");
@@ -238,7 +240,7 @@ function currentSettings() {
   return {
     mode: mode.value,
     format: format.value,
-    captureDelay: Number(captureDelay.value),
+    captureDelay: captureDelay.value === "custom" ? Math.max(1, normalizeCaptureDelay(captureDelaySeconds.value)) : Number(captureDelay.value),
     paginationScope: paginationScope.value,
     paginationLimit: normalizePaginationLimit(paginationLimit.value),
     paginationWait: normalizePaginationWait(paginationWait.value),
@@ -279,7 +281,9 @@ function applySavedSettings(captureSettings) {
   const settings = { ...defaults, ...captureSettings };
   setSelectValueIfValid(mode, settings.mode, ["viewport", "region", "full", "scroll-area", "pagination"]);
   format.value = selectValue(settings.format, ["png", "jpeg", "pdf"], defaults.format);
-  captureDelay.value = String(selectValue(settings.captureDelay, [0, 3, 5], defaults.captureDelay));
+  const delay = normalizeCaptureDelay(settings.captureDelay);
+  captureDelay.value = [0, 3, 5].includes(delay) ? String(delay) : "custom";
+  if (delay > 0 && ![3, 5].includes(delay)) captureDelaySeconds.value = String(delay);
   paginationScope.value = selectValue(settings.paginationScope, ["viewport", "full", "scroll-area"], defaults.paginationScope);
   paginationLimit.value = normalizePaginationLimit(settings.paginationLimit);
   paginationWait.value = normalizePaginationWait(settings.paginationWait);
@@ -341,6 +345,7 @@ function updateControls() {
   const isPdf = format.value === "pdf";
   const isPagination = mode.value === "pagination";
   paginationSetting.hidden = !isPagination;
+  captureDelayCustom.hidden = captureDelay.value !== "custom";
   previewEdit.disabled = false;
   document.querySelector("#preview-label").textContent = isPagination ? kiriT("出力前にプレビュー") : kiriT("出力前にプレビュー・編集");
   document.querySelector("#preview-note").hidden = isPagination;
@@ -363,7 +368,8 @@ function updateControls() {
 
 mode.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
 format.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
-captureDelay.addEventListener("change", persistSettingsFromControls);
+captureDelay.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
+captureDelaySeconds.addEventListener("change", () => { captureDelaySeconds.value = String(Math.max(1, normalizeCaptureDelay(captureDelaySeconds.value))); persistSettingsFromControls(); });
 paginationLimit.addEventListener("change", persistSettingsFromControls);
 paginationScope.addEventListener("change", () => { updateControls(); persistSettingsFromControls(); });
 paginationWait.addEventListener("change", persistSettingsFromControls);

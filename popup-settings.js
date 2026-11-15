@@ -11,6 +11,11 @@ function clampInteger(value, min, max, fallback) {
   return Math.min(max, Math.max(min, Math.floor(Number(value) || fallback)));
 }
 
+export function normalizeCaptureDelay(value) {
+  const seconds = Number(value);
+  return Number.isFinite(seconds) ? Math.min(999, Math.max(0, Math.floor(seconds))) : 0;
+}
+
 export const normalizePaginationLimit = (value) => clampInteger(value, 1, 50, defaults.paginationLimit);
 export const normalizePaginationWait = (value) => clampInteger(value, 500, 10000, defaults.paginationWait);
 export const normalizeMaxFrames = (value) => clampInteger(value, 1, 200, defaults.maxFrames);

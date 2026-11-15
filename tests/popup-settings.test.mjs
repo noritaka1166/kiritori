@@ -67,3 +67,11 @@ test("a failed write does not prevent later settings from being saved", async ()
   await store.save({ mode: "region" }, "example.com");
   assert.deepEqual(storage.data.siteCaptureSettings, { "example.com": { mode: "region" } });
 });
+
+test("capture delay accepts custom seconds and bounds invalid values", () => {
+  assert.equal(settings.normalizeCaptureDelay(3), 3);
+  assert.equal(settings.normalizeCaptureDelay("42"), 42);
+  assert.equal(settings.normalizeCaptureDelay(1200), 999);
+  assert.equal(settings.normalizeCaptureDelay(-1), 0);
+  assert.equal(settings.normalizeCaptureDelay("invalid"), 0);
+});
