@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../editor-annotations.js", import.meta.url));
-const { createAnnotationTools } = await import(`data:text/javascript;base64,${source.toString("base64")}`);
+const { drawOperation, hitObject, hitRadius, textBounds, textPoint } = await import(`data:text/javascript;base64,${source.toString("base64")}`);
 
 function setup() {
   const calls = [];
@@ -15,7 +15,7 @@ function setup() {
     set(_target, name, value) { calls.push([name, value]); return true; }
   });
   const canvas = { width: 200, height: 100, getBoundingClientRect: () => ({ width: 100 }) };
-  return { ...createAnnotationTools(canvas, context), calls };
+  return { drawOperation: (operation, crop) => drawOperation(operation, crop, canvas, context), hitObject: (point, state) => hitObject(point, state, canvas, context), hitRadius: () => hitRadius(canvas), textBounds: item => textBounds(item, context), textPoint, calls };
 }
 
 test("hit testing respects scaled tolerance, stacking, and opaque redaction", () => {

@@ -1,6 +1,6 @@
 import { appendHistory, navigateHistoryStacks, historyForDraft } from "./editor-history.js";
 import { closeCaptureView } from "./capture-view.js";
-import { createAnnotationTools } from "./editor-annotations.js";
+import { drawOperation, hitObject, hitRadius, textBounds, textPoint } from "./editor-annotations.js";
 
 kiriLocalizeDocument();
 const jobId = new URLSearchParams(location.search).get("job");
@@ -52,7 +52,7 @@ const textRotateHandle = document.querySelector("#text-rotate-handle");
 const textRotateLine = document.querySelector("#text-rotate-line");
 const toolButtons = [...document.querySelectorAll("[data-tool]")];
 const context = canvas.getContext("2d", { alpha: false });
-const { drawOperation, hitObject, hitRadius, textBounds, textPoint } = createAnnotationTools(canvas, context);
+
 let draftDb, draftData, draftSourceUrl;
 let draftWrite = Promise.resolve();
 let draftClosed = false;
@@ -258,7 +258,7 @@ function render(state = currentState(), excludedIndex = null) {
 
   for (const [index, operation] of state.operations.entries()) {
     if (index === excludedIndex) continue;
-    drawOperation(operation, crop);
+    drawOperation(operation, crop, canvas, context);
   }
   renderObjectSelection(state);
   updateButtons();
@@ -271,7 +271,7 @@ function positionInlineText() {
   const scale = canvas.getBoundingClientRect().width / canvas.width;
   if (!Number.isFinite(scale) || scale <= 0) return;
   const sample = { ...item, text: inlineText.value || " " };
-  const width = Math.max(textBounds(sample).width, textBounds(item).width);
+  const width = Math.max(textBounds(sample, context).width, textBounds(item, context).width);
   inlineText.style.left = `${(item.x - crop.x) * scale}px`;
   inlineText.style.top = `${(item.y - crop.y) * scale}px`;
   inlineText.style.fontSize = `${Math.max(12, item.size * scale)}px`;
@@ -406,7 +406,7 @@ function renderLineSelection(item, crop, radius) {
 function renderTextSelection(item, crop, radius) {
   setVisibility([objectLine, objectStart, objectEnd], "hidden");
   objectBox.setAttribute("visibility", "visible");
-  const box = textBounds(item);
+  const box = textBounds(item, context);
   setAttributes(objectBox, {
     x: 0,
     y: 0,
@@ -479,7 +479,7 @@ function renderObjectSelection(state) {
   updateObjectControls(item);
   objectSelection.setAttribute("visibility", "visible");
   const crop = state.crop;
-  const radius = hitRadius() * .7;
+  const radius = hitRadius(canvas) * .7;
   for (const shape of [objectLine, objectStart, objectEnd, objectBox, textResizeHandle, textRotateHandle, textRotateLine]) shape.setAttribute("vector-effect", "non-scaling-stroke");
   if (["arrow", "line"].includes(item.type)) renderLineSelection(item, crop, radius);
   else if (item.type === "text") renderTextSelection(item, crop, radius);
@@ -582,9 +582,9 @@ function startTextHandleDrag(event, handle) {
   const item = selectedIndex === null ? null : state.operations[selectedIndex];
   if (!item || !["text", "rect", "ellipse"].includes(item.type) || (handle === "text-rotate" && item.type !== "text")) return;
   if (item.type !== "text") handle = "shape-resize";
-  const bounds = item.type === "text" ? textBounds(item) : { width: item.width, height: item.height };
+  const bounds = item.type === "text" ? textBounds(item, context) : { width: item.width, height: item.height };
   const start = point(event, false);
-  const rotateBelow = textPoint(item, bounds.width / 2, -hitRadius() * .7 * 4).y < state.crop.y;
+  const rotateBelow = textPoint(item, bounds.width / 2, -hitRadius(canvas) * .7 * 4).y < state.crop.y;
   drag = { start, current: start, index: selectedIndex, handle, base: state, bounds, center: textPoint(item, bounds.width / 2, bounds.height / 2), rotateBelow };
   canvas.setPointerCapture(event.pointerId);
 }
@@ -597,12 +597,12 @@ function startSelectionDrag(event, start) {
   let index = selectedIndex;
   let item = index === null ? null : state.operations[index];
   let handle = "move";
-  const radius = hitRadius();
+  const radius = hitRadius(canvas);
   const isLine = ["arrow", "line"].includes(item?.type);
   if (isLine && Math.hypot(start.x - item.x1, start.y - item.y1) <= radius) handle = "start";
   else if (isLine && Math.hypot(start.x - item.x2, start.y - item.y2) <= radius) handle = "end";
   else {
-    index = hitObject(start, state);
+    index = hitObject(start, state, canvas, context);
     item = index === null ? null : state.operations[index];
   }
   selectedIndex = index;
