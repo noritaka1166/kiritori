@@ -71,8 +71,9 @@ function siteKey(url) {
   try {
     const parsed = new URL(url);
     return ["http:", "https:"].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null;
-  } catch (_) {
-    // 内部ページにはサイト別設定を適用しません。
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    // URLを解析できずホスト名を得られないタブには、サイト別設定を適用しません。
     return null;
   }
 }
