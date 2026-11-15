@@ -17,7 +17,7 @@ main { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: con
 .primary-settings { padding: 1px 14px 14px; background: #fff; border: 1px solid #e3e9f3; border-radius: 13px; box-shadow: 0 2px 9px #263c6510; }
 label { display: block; margin: 13px 0 6px; color: #263750; font-weight: 650; }
 select, input { width: 100%; min-height: 42px; border: 1px solid #d8e0ed; border-radius: 8px; background: #f9fbff; color: #1e293b; font: inherit; font-size: 15px; padding: 7px 10px; }
-select { min-height: 36px; font-size: 14px; padding: 5px 10px; }
+select { min-height: 36px; font-size: 14px; padding: 5px 36px 5px 10px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%231e293b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
 select:hover, input:hover { border-color: #aebed5; }
 select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid #aac8ff; outline-offset: 2px; }
 .note, .failure-note, .failure-meta { color: #52647c; font-size: 12.5px; line-height: 1.5; }
