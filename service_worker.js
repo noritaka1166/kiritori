@@ -1864,7 +1864,7 @@ async function capturePaginatedScrollFrames(tab, job, scope, page, maxFrames, sc
   let targetY = 0;
   let previousY = -1;
   for (let index = 0; index < maxFrames; index += 1) {
-    const result = await capturePaginatedScrollFrame(tab, job, scope, page, scrollWaitMs, timing, index, targetY, previousY);
+    const result = await capturePaginatedScrollFrame(tab, job, scope, page, scrollWaitMs, timing, { index, targetY, previousY });
     if (result.completed) return true;
     targetY = result.targetY;
     previousY = result.actualY;
@@ -1872,7 +1872,8 @@ async function capturePaginatedScrollFrames(tab, job, scope, page, maxFrames, sc
   return false;
 }
 
-async function capturePaginatedScrollFrame(tab, job, scope, page, scrollWaitMs, timing, index, targetY, previousY) {
+async function capturePaginatedScrollFrame(tab, job, scope, page, scrollWaitMs, timing, framePosition) {
+  const { index, targetY, previousY } = framePosition;
   throwIfCancelled(job);
   await assertTabStillActive(tab.id, tab.windowId);
   const fullPage = scope === "full";
